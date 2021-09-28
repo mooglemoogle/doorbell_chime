@@ -1,0 +1,69 @@
+{
+    "gpio_pin": "D18",
+    "num_lights": 10,
+    "bpp": 3,
+    "order": "GRB",
+    "brightness": 0.8,
+
+    "selected_algorithm": "Rainbow",
+    "selected_options": {
+        "speed": 100,
+        "reverse": false
+    },
+    "running": true,
+
+    "algorithms": [
+        {
+            "name": "Rainbow",
+            "module": "rainbow",
+            "options": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                    "speed": {
+                        "title": "Speed",
+                        "type": "integer",
+                        "default": 100,
+                        "minimum": 1,
+                        "maximum": 300
+                    },
+                    "reverse": {
+                        "title": "Reverse",
+                        "type": "boolean",
+                        "default": false
+                    }
+                },
+                "default": {
+                    "speed": 100,
+                    "reverse": false
+                }
+            }
+        },
+        {
+            "name": "Rainbow 2",
+            "module": "rainbow2",
+            "options": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                    "speed": {
+                        "title": "Speed",
+                        "type": "integer",
+                        "default": 100,
+                        "minimum": 1,
+                        "maximum": 300
+                    },
+                    "reverse": {
+                        "title": "Reverse",
+                        "type": "boolean",
+                        "default": false
+                    }
+                },
+                "default": {
+                    "speed": 100,
+                    "reverse": false
+                }
+            }
+        }
+    ]
+}
