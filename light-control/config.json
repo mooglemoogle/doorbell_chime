@@ -5,14 +5,31 @@
     "order": "GRB",
     "brightness": 0.8,
 
-    "selected_algorithm": "Rainbow",
-    "selected_options": {
-        "speed": 100,
-        "reverse": false
-    },
+    "cycle": [
+        {
+            "algorithm": "Rainbow",
+            "options": {
+                "speed": 100,
+                "reverse": false
+            }
+        }
+    ],
+    "seconds_per_cycle": 3600,
     "running": true,
 
     "algorithms": [
+        {
+            "name": "Off",
+            "module": "off",
+            "options": {},
+            "refresh_rate": 2
+        },
+        {
+            "name": "Transition",
+            "module": "transition",
+            "options": {},
+            "refresh_rate": 60
+        },
         {
             "name": "Rainbow",
             "module": "rainbow",
@@ -37,7 +54,8 @@
                     "speed": 100,
                     "reverse": false
                 }
-            }
+            },
+            "refresh_rate": 60
         },
         {
             "name": "Rainbow 2",
@@ -63,7 +81,8 @@
                     "speed": 100,
                     "reverse": false
                 }
-            }
+            },
+            "refresh_rate": 60
         }
     ]
 }
