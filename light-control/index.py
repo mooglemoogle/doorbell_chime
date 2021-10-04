@@ -36,6 +36,12 @@ class Runner():
     
     def brightness(self):
         return self.config.get_value('brightness')
+    
+    def seconds_per_cycle(self):
+        return self.config.get_value('seconds_per_cycle')
+    
+    def transition_time(self):
+        return self.config.get_value('transition_time')
 
     def __create_pixels(self):
         self.pixels = neopixel.NeoPixel(
@@ -96,9 +102,12 @@ class Runner():
         if updated:
             if not self.config.get_value('running') and not self.is_off():
                 self.turn_off()
+            self.__transition_alg.update_transition_time(self.transition_time())
         if not self.is_off():
-            self.__cur_alg.run_cycle()
+            result = self.__cur_alg.run_cycle()
             self.__apply_lights()
+            if not result:
+                self.__cur_alg = self.__next_alg
         if updated:
             self.config.updated = False
     

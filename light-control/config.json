@@ -15,6 +15,7 @@
         }
     ],
     "seconds_per_cycle": 3600,
+    "transition_time": 1000,
     "running": true,
 
     "algorithms": [
