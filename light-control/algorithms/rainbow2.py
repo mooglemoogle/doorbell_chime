@@ -1,5 +1,5 @@
-import json
-import logging
+# import json
+# import logging
 import math
 
 from algorithms.algorithm import Algorithm
@@ -52,5 +52,5 @@ class Algorithm(Algorithm):
             pixel.hue = new_hue
         
         # self.pixels.show()
-        self.logger.log(logging.INFO, json.dumps(['{:0.2f}'.format(x) for x in self.pixel_hues]))
+        # self.logger.log(logging.INFO, json.dumps(['{:0.2f}'.format(x) for x in self.pixel_hues]))
         return super().run_cycle()
