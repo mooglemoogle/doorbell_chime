@@ -12,16 +12,26 @@ from algorithms.transition import Algorithm as Transition
 def load_algorithm(alg_config):
     return import_module('algorithms.' + alg_config['module'])
 
+def print_colors(colors: neopixel.NeoPixel):
+    return ''.join([
+        '\033[48;2;{0:d};{1:d};{2:d}m  \033[0m'.format(*(colors[n])) for n in range(colors.n)
+    ])
+
 class Runner():
     def __init__(self) -> None:
         self.logger = logging.getLogger(__name__)
         self.config = Config()
         self.cycle_index = 0
+        self.__off_alg = Off('Off', self.num_pixels(), self.config.alg_map['Off'], {})
+        self.__transition_alg = Transition(
+            'Transition',
+            self.num_pixels(),
+            self.config.alg_map['Transition'],
+            {'transition_time': self.transition_time()}
+        )
+        self.__cur_alg = self.__off_alg
         self.__create_pixels()
         self.__refresh_algorithms()
-        self.__off_alg = Off('Off', self.num_pixels(), self.config.alg_map['Off'], {})
-        self.__transition_alg = Transition('Transition', self.num_pixels(), self.config.alg_map['Transition'], {})
-        self.__cur_alg = self.__off_alg
 
     def board_pin(self):
         return getattr(board, self.config.get_value('gpio_pin'))
@@ -88,7 +98,7 @@ class Runner():
         return self.__cur_alg.refresh_rate()
 
     def __apply_lights(self):
-        for i in range(self.num_pixels):
+        for i in range(self.num_pixels()):
             pixel = self.__cur_alg.pixels[i]
             nc = colorsys.hsv_to_rgb(pixel.hue, pixel.sat, self.brightness() * pixel.val)
             if self.bpp() == 3:
@@ -97,19 +107,21 @@ class Runner():
                 white = pixel.white * self.brightness() * 255
                 self.pixels[i] = (nc[0] * 255, nc[1] * 255, nc[2] * 255, white)
 
-        self.logger.log(logging.INFO, json.dumps(['{:0.2f}'.format(self.pixels[i]) for i in range(self.num_pixels())]))
-        self.pixels.show()
+        self.logger.log(logging.DEBUG, print_colors(self.pixels))
+        # self.pixels.show()
     
     def run_cycle(self):
         updated = self.config.updated
         if updated:
             if not self.config.get_value('running') and not self.is_off():
+                self.logger.log(logging.INFO, "Config updated 'running' property to 'false'. Stopping lights")
                 self.turn_off()
             self.__transition_alg.update_transition_time(self.transition_time())
         if not self.is_off():
             result = self.__cur_alg.run_cycle()
             self.__apply_lights()
-            if not result:
+            if result:
+                self.logger.log(logging.INFO, "Transition complete, moving to next algorithm")
                 self.__cur_alg = self.__next_alg
         if updated:
             self.config.updated = False

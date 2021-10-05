@@ -5,8 +5,8 @@ import math
 from algorithms.algorithm import Algorithm
 
 class Algorithm(Algorithm):
-    def __init__(self, name, config) -> None:
-        super().__init__(name, config)
+    def __init__(self, name, num_pixels, alg_config, settings) -> None:
+        super().__init__(name, num_pixels, alg_config, settings)
         self.num = len(self.pixels)
         middle = self.num / 2
         floor_middle = math.floor(middle)

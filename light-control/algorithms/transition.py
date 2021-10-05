@@ -1,5 +1,5 @@
 from algorithms.algorithm import Algorithm
-from helpers import get_millis, bezier_blend
+from algorithms.helpers import get_millis, bezier_blend
 
 class Algorithm(Algorithm):
     def __init__(self, name, num_pixels, alg_config, settings) -> None:
@@ -20,8 +20,8 @@ class Algorithm(Algorithm):
         self.__next_pixels = next_pixels
         self.__start_time = get_millis()
 
-    def run_cycle(self, pixel_strip):
-        super().run_cycle(pixel_strip)
+    def run_cycle(self):
+        super().run_cycle()
         run_time = get_millis()
 
         if run_time - self.__start_time > self.transition_time():
