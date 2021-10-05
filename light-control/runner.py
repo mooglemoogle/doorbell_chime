@@ -5,6 +5,8 @@ import board
 from importlib import import_module
 from config import Config
 import json
+import time
+import math
 
 from algorithms.off import Algorithm as Off
 from algorithms.transition import Algorithm as Transition
@@ -30,6 +32,9 @@ class Runner():
             {'transition_time': self.transition_time()}
         )
         self.__cur_alg = self.__off_alg
+        self.__last_cycle_time = time.time()
+        self.__last_change_time = time.time()
+        self.__next_cycle_length = math.inf
         self.__create_pixels()
         self.__refresh_algorithms()
 
@@ -66,7 +71,7 @@ class Runner():
     def __refresh_algorithms(self):
         self.cycle_index = -1
         self.__alg_cycle = self.config.get_value('cycle')
-        if len(self.__alg_cycle) == 0:
+        if len(self.__alg_cycle) == 0 or not self.config.get_value('running'):
             self.turn_off()
         else:
             self.next_algorithm()
@@ -76,6 +81,7 @@ class Runner():
         if self.cycle_index >= len(self.__alg_cycle):
             self.cycle_index = 0
         next_alg = self.__alg_cycle[self.cycle_index]
+        self.__next_cycle_length = next_alg['seconds_in_cycle']
         next_alg_config = self.config.alg_map[next_alg['algorithm']]
 
         next_alg_module = load_algorithm(next_alg_config)
@@ -83,6 +89,7 @@ class Runner():
         self.__start_transition()
 
     def turn_off(self):
+        self.cycle_index = -1
         self.__next_alg = self.__off_alg
         self.__off_alg.set_hue_sat(self.__cur_alg.pixels)
         self.__start_transition()
@@ -92,7 +99,10 @@ class Runner():
         self.__cur_alg = self.__transition_alg
 
     def is_off(self):
-        return self.__cur_alg == self.__off_alg
+        return self.__cur_alg is self.__off_alg
+    
+    def is_in_transition(self):
+        return self.__cur_alg is self.__transition_alg
     
     def refresh_rate(self):
         return self.__cur_alg.refresh_rate()
@@ -107,24 +117,50 @@ class Runner():
                 white = pixel.white * self.brightness() * 255
                 self.pixels[i] = (nc[0] * 255, nc[1] * 255, nc[2] * 255, white)
 
-        self.logger.log(logging.DEBUG, print_colors(self.pixels))
-        # self.pixels.show()
+        # self.logger.log(logging.DEBUG, print_colors(self.pixels))
+        self.pixels.show()
+    
+    def __on_config_update(self):
+        running = self.config.get_value('running')
+        new_alg_cycle = self.config.get_value('cycle')
+
+        if new_alg_cycle != self.__alg_cycle:
+            self.logger.log(logging.INFO, "Config updated with new cycle parameters")
+            self.__alg_cycle = new_alg_cycle
+            self.cycle_index = -1
+            if running and not self.is_off():
+                self.logger.log(logging.INFO, "Reseting algorithm cycle")
+                self.next_algorithm()
+        if not running and not self.is_off():
+            self.logger.log(logging.INFO, "Config updated 'running' property to 'false'. Stopping lights")
+            self.turn_off()
+        elif running and self.is_off():
+            self.logger.log(logging.INFO, "Config updated 'running' property to 'true'. Starting lights")
+            self.next_algorithm()
+        
+        self.__transition_alg.update_transition_time(self.transition_time())
     
     def run_cycle(self):
+        this_cycle_time = time.time()
+        since_last_change = this_cycle_time - self.__last_change_time
+        # self.logger.log(logging.DEBUG, f"{since_last_change:.3f} {self.__next_cycle_length:.3f}")
+        elapsed = this_cycle_time - self.__last_cycle_time
         updated = self.config.updated
         if updated:
-            if not self.config.get_value('running') and not self.is_off():
-                self.logger.log(logging.INFO, "Config updated 'running' property to 'false'. Stopping lights")
-                self.turn_off()
-            self.__transition_alg.update_transition_time(self.transition_time())
+            self.__on_config_update()
         if not self.is_off():
-            result = self.__cur_alg.run_cycle()
+            result = self.__cur_alg.run_cycle(elapsed * 1000.0, elapsed)
             self.__apply_lights()
             if result:
                 self.logger.log(logging.INFO, "Transition complete, moving to next algorithm")
                 self.__cur_alg = self.__next_alg
+                self.__last_change_time = this_cycle_time
+            elif not self.is_in_transition() and since_last_change > self.__next_cycle_length:
+                self.logger.log(logging.INFO, "Cycle time over, starting transition to next algorithm")
+                self.next_algorithm()
         if updated:
             self.config.updated = False
+        self.__last_cycle_time = this_cycle_time
     
     def destroy(self):
         self.config.destroy()

@@ -20,8 +20,8 @@ class Algorithm(Algorithm):
         self.__next_pixels = next_pixels
         self.__start_time = get_millis()
 
-    def run_cycle(self):
-        super().run_cycle()
+    def run_cycle(self, elaspsed_millis, elapsed_seconds):
+        super().run_cycle(elaspsed_millis, elapsed_seconds)
         run_time = get_millis()
 
         if run_time - self.__start_time > self.transition_time():

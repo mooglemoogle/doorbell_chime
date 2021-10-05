@@ -39,18 +39,19 @@ class Algorithm(Algorithm):
             pixel.sat = 1.0
             pixel.val = 1.0
     
-    def run_cycle(self):
-        speed = self.settings()['speed']
-        multiplier = -0.1 if self.settings()['reverse'] else 0.1
+    def run_cycle(self, _, elapsed_seconds):
+        speed = self.settings()['speed'] / 360.0
+        reverser = -1 if self.settings()['reverse'] else 1
+        to_move = speed * elapsed_seconds * reverser
         for i in range(self.num):
             pixel = self.pixels[i]
-            new_hue = pixel.hue + (multiplier * (speed / 100))
+            new_hue = pixel.hue + to_move
             if new_hue > 1.0:
-                new_hue = 0
+                new_hue -= 1.0
             elif new_hue < 0.0:
-                new_hue = 1.0
+                new_hue += 1.0
             pixel.hue = new_hue
         
         # self.pixels.show()
         # self.logger.log(logging.INFO, json.dumps(['{:0.2f}'.format(x) for x in self.pixel_hues]))
-        return super().run_cycle()
+        return super().run_cycle(_, elapsed_seconds)
