@@ -8,6 +8,7 @@ rpi-ws281x = "*"
 adafruit-circuitpython-neopixel = "*"
 fpstimer = "*"
 watchdog = "*"
+python-dotenv = "*"
 
 [dev-packages]
 

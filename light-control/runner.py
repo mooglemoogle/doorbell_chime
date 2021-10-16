@@ -8,8 +8,12 @@ import json
 import time
 import math
 
+import os
+
 from algorithms.off import Algorithm as Off
 from algorithms.transition import Algorithm as Transition
+
+is_dev_mode = os.getenv("MODE") == "DEVELOPMENT"
 
 def load_algorithm(alg_config):
     return import_module('algorithms.' + alg_config['module'])
@@ -117,8 +121,10 @@ class Runner():
                 white = pixel.white * self.brightness() * 255
                 self.pixels[i] = (nc[0] * 255, nc[1] * 255, nc[2] * 255, white)
 
-        # self.logger.log(logging.DEBUG, print_colors(self.pixels))
-        self.pixels.show()
+        if (is_dev_mode):
+            self.logger.log(logging.DEBUG, print_colors(self.pixels))
+        else:
+            self.pixels.show()
     
     def __on_config_update(self):
         running = self.config.get_value('running')

@@ -1,14 +1,19 @@
 {
     "gpio_pin": "D18",
-    "num_lights": 20,
+    "num_lights": 30,
     "bpp": 3,
     "order": "GRB",
-    "brightness": 0.8,
+    "brightness": 1.0,
 
     "cycle": [
         {
+            "algorithm": "White",
+            "seconds_in_cycle": 20,
+            "options": {}
+        },
+        {
             "algorithm": "Rainbow",
-            "seconds_in_cycle": 10,
+            "seconds_in_cycle": 30,
             "options": {
                 "speed": 100,
                 "reverse": false
@@ -16,14 +21,14 @@
         },
         {
             "algorithm": "Rainbow 2",
-            "seconds_in_cycle": 10,
+            "seconds_in_cycle": 30,
             "options": {
                 "speed": 100,
                 "reverse": false
             }
         }
     ],
-    "transition_time": 1000,
+    "transition_time": 2000,
     "running": true,
 
     "algorithms": [
@@ -38,6 +43,12 @@
             "module": "transition",
             "options": {},
             "refresh_rate": 60
+        },
+        {
+            "name": "White",
+            "module": "white",
+            "options": {},
+            "refresh_rate": 2
         },
         {
             "name": "Rainbow",
