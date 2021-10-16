@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "dca4807dc445388825104c8ee60c77626d73c968fcf73e9e9b889d91772543b5"
+            "sha256": "7b3e9760482cdf0145af93c0f1f23f465f2b1e84c4ebb0f5b6d58f1737b574ac"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -47,15 +47,8 @@
             "hashes": [
                 "sha256:2caf22fb07c7f771d83267f331a76cde314723f884a9570ea6f768730c87a879"
             ],
-            "markers": "python_full_version >= '3.5.0'",
+            "markers": "python_version >= '3.5'",
             "version": "==1.1.9"
-        },
-        "fpstimer": {
-            "hashes": [
-                "sha256:fba3bcebfda796d2eb4251ea88e2b45b1f3909e05afa79812778d0d98c3acfca"
-            ],
-            "index": "pypi",
-            "version": "==0.0.1"
         },
         "pyftdi": {
             "hashes": [

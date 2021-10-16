@@ -164,6 +164,8 @@ class Runner():
             elif not self.is_in_transition() and since_last_change > self.__next_cycle_length:
                 self.logger.log(logging.INFO, "Cycle time over, starting transition to next algorithm")
                 self.next_algorithm()
+        elif is_dev_mode:
+            self.logger.log(logging.DEBUG, "Cycle off")
         if updated:
             self.config.updated = False
         self.__last_cycle_time = this_cycle_time
