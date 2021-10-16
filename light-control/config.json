@@ -20,7 +20,7 @@
             }
         },
         {
-            "algorithm": "Rainbow 2",
+            "algorithm": "Split Rainbow",
             "seconds_in_cycle": 30,
             "options": {
                 "speed": 100,
@@ -78,7 +78,7 @@
             "refresh_rate": 60
         },
         {
-            "name": "Rainbow 2",
+            "name": "Split Rainbow",
             "module": "rainbow2",
             "options": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",

@@ -51,7 +51,4 @@ class Algorithm(Algorithm):
             elif new_hue < 0.0:
                 new_hue += 1.0
             pixel.hue = new_hue
-        
-        # self.pixels.show()
-        # self.logger.log(logging.INFO, json.dumps(['{:0.2f}'.format(x) for x in self.pixel_hues]))
         return super().run_cycle(_, elapsed_seconds)
