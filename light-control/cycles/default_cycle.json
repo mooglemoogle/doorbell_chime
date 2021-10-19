@@ -1,0 +1,18 @@
+[
+    {
+        "algorithm": "Rainbow",
+        "seconds_in_cycle": 30,
+        "options": {
+            "speed": 100,
+            "reverse": false
+        }
+    },
+    {
+        "algorithm": "Split Rainbow",
+        "seconds_in_cycle": 30,
+        "options": {
+            "speed": 100,
+            "reverse": false
+        }
+    }
+]

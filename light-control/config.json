@@ -5,31 +5,8 @@
     "order": "GRB",
     "brightness": 1.0,
 
-    "cycle": [
-        {
-            "algorithm": "White",
-            "seconds_in_cycle": 20,
-            "options": {}
-        },
-        {
-            "algorithm": "Rainbow",
-            "seconds_in_cycle": 30,
-            "options": {
-                "speed": 100,
-                "reverse": false
-            }
-        },
-        {
-            "algorithm": "Split Rainbow",
-            "seconds_in_cycle": 30,
-            "options": {
-                "speed": 100,
-                "reverse": false
-            }
-        }
-    ],
     "transition_time": 2000,
-    "running": true,
+    "running": false,
 
     "algorithms": [
         {

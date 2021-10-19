@@ -4,6 +4,7 @@ import neopixel
 import board
 from importlib import import_module
 from config import Config
+from cycle import Cycle
 import json
 import time
 import math
@@ -27,6 +28,7 @@ class Runner():
     def __init__(self) -> None:
         self.logger = logging.getLogger(__name__)
         self.config = Config()
+        self.cycle = Cycle()
         self.cycle_index = 0
         self.__off_alg = Off('Off', self.num_pixels(), self.config.alg_map['Off'], {})
         self.__transition_alg = Transition(
@@ -74,17 +76,18 @@ class Runner():
     
     def __refresh_algorithms(self):
         self.cycle_index = -1
-        self.__alg_cycle = self.config.get_value('cycle')
-        if len(self.__alg_cycle) == 0 or not self.config.get_value('running'):
+        cycle = self.cycle.cycles
+        if len(cycle) == 0 or not self.config.get_value('running'):
             self.turn_off()
         else:
             self.next_algorithm()
         
     def next_algorithm(self):
+        cycle = self.cycle.cycles
         self.cycle_index += 1
-        if self.cycle_index >= len(self.__alg_cycle):
+        if self.cycle_index >= len(cycle):
             self.cycle_index = 0
-        next_alg = self.__alg_cycle[self.cycle_index]
+        next_alg = cycle[self.cycle_index]
         self.__next_cycle_length = next_alg['seconds_in_cycle']
         next_alg_config = self.config.alg_map[next_alg['algorithm']]
 
@@ -128,15 +131,7 @@ class Runner():
     
     def __on_config_update(self):
         running = self.config.get_value('running')
-        new_alg_cycle = self.config.get_value('cycle')
 
-        if new_alg_cycle != self.__alg_cycle:
-            self.logger.log(logging.INFO, "Config updated with new cycle parameters")
-            self.__alg_cycle = new_alg_cycle
-            self.cycle_index = -1
-            if running and not self.is_off():
-                self.logger.log(logging.INFO, "Reseting algorithm cycle")
-                self.next_algorithm()
         if not running and not self.is_off():
             self.logger.log(logging.INFO, "Config updated 'running' property to 'false'. Stopping lights")
             self.turn_off()
@@ -146,14 +141,27 @@ class Runner():
         
         self.__transition_alg.update_transition_time(self.transition_time())
     
+    def __on_cycle_update(self):
+        self.logger.log(logging.INFO, "Cycle file updated")
+        running = self.config.get_value('running')
+        self.cycle_index = -1
+        if running and not self.is_off():
+            self.logger.log(logging.INFO, "Reseting algorithm cycle")
+            self.next_algorithm()
+    
     def run_cycle(self):
         this_cycle_time = time.time()
         since_last_change = this_cycle_time - self.__last_change_time
         # self.logger.log(logging.DEBUG, f"{since_last_change:.3f} {self.__next_cycle_length:.3f}")
         elapsed = this_cycle_time - self.__last_cycle_time
-        updated = self.config.updated
-        if updated:
+        
+        if self.config.updated:
             self.__on_config_update()
+            self.config.updated = False
+        if self.cycle.updated:
+            self.__on_cycle_update()
+            self.cycle.updated = False
+
         if not self.is_off():
             result = self.__cur_alg.run_cycle(elapsed * 1000.0, elapsed)
             self.__apply_lights()
@@ -166,8 +174,6 @@ class Runner():
                 self.next_algorithm()
         elif is_dev_mode:
             self.logger.log(logging.DEBUG, "Cycle off")
-        if updated:
-            self.config.updated = False
         self.__last_cycle_time = this_cycle_time
     
     def destroy(self):
