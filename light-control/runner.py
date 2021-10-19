@@ -1,18 +1,19 @@
-import colorsys
 import logging
 import neopixel
-import board
 from importlib import import_module
 from config import Config
 from cycle import Cycle
 import json
 import time
 import math
+from functools import reduce
 
 import os
 
 from algorithms.off import Algorithm as Off
 from algorithms.transition import Algorithm as Transition
+
+from light_strip import LightStrip
 
 is_dev_mode = os.getenv("MODE") == "DEVELOPMENT"
 
@@ -30,6 +31,7 @@ class Runner():
         self.config = Config()
         self.cycle = Cycle()
         self.cycle_index = 0
+        self.__initialize_light_strips()
         self.__off_alg = Off('Off', self.num_pixels(), self.config.alg_map['Off'], {})
         self.__transition_alg = Transition(
             'Transition',
@@ -41,21 +43,11 @@ class Runner():
         self.__last_cycle_time = time.time()
         self.__last_change_time = time.time()
         self.__next_cycle_length = math.inf
-        self.__create_pixels()
         self.__refresh_algorithms()
-
-    def board_pin(self):
-        return getattr(board, self.config.get_value('gpio_pin'))
-
+    
     def num_pixels(self):
-        return self.config.get_value('num_lights')
+        return reduce(lambda acc, strip: acc + strip.num_pixels(), self.light_strips, 0)
 
-    def bpp(self):
-        return self.config.get_value('bpp')
-    
-    def pixel_order(self):
-        return getattr(neopixel, self.config.get_value('order'))
-    
     def brightness(self):
         return self.config.get_value('brightness')
     
@@ -64,15 +56,13 @@ class Runner():
     
     def transition_time(self):
         return self.config.get_value('transition_time')
-
-    def __create_pixels(self):
-        self.pixels = neopixel.NeoPixel(
-            self.board_pin(),
-            self.num_pixels(),
-            bpp=self.bpp(),
-            pixel_order=self.pixel_order(),
-            auto_write=False
-        )
+    
+    def __initialize_light_strips(self):
+        light_config = self.config.get_value('light_strips')
+        self.light_strips = [
+            LightStrip(i, light_config[i])
+            for i in range(len(light_config))
+        ]
     
     def __refresh_algorithms(self):
         self.cycle_index = -1
@@ -115,19 +105,11 @@ class Runner():
         return self.__cur_alg.refresh_rate()
 
     def __apply_lights(self):
-        for i in range(self.num_pixels()):
-            pixel = self.__cur_alg.pixels[i]
-            nc = colorsys.hsv_to_rgb(pixel.hue, pixel.sat, self.brightness() * pixel.val)
-            if self.bpp() == 3:
-                self.pixels[i] = (nc[0] * 255, nc[1] * 255, nc[2] * 255)
-            elif self.bpp() == 4:
-                white = pixel.white * self.brightness() * 255
-                self.pixels[i] = (nc[0] * 255, nc[1] * 255, nc[2] * 255, white)
-
-        if (is_dev_mode):
-            self.logger.log(logging.DEBUG, print_colors(self.pixels))
-        else:
-            self.pixels.show()
+        pixels = self.__cur_alg.pixels
+        for strip in self.light_strips:
+            strip.apply_lights(pixels, self.brightness())
+            if (is_dev_mode):
+                self.logger.log(logging.DEBUG, print_colors(strip.pixels))
     
     def __on_config_update(self):
         running = self.config.get_value('running')

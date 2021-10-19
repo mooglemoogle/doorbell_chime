@@ -1,12 +1,24 @@
 {
-    "gpio_pin": "D18",
-    "num_lights": 30,
-    "bpp": 3,
-    "order": "GRB",
-    "brightness": 1.0,
+    "light_strips": [
+        {
+            "index_start": 29,
+            "index_end": 0,
+            "gpio_pin": "D18",
+            "bpp": 3,
+            "order": "GRB"
+        },
+        {
+            "index_start": 30,
+            "index_end": 59,
+            "gpio_pin": "D23",
+            "bpp": 3,
+            "order": "GRB"
+        }
+    ],
 
+    "brightness": 1.0,
     "transition_time": 2000,
-    "running": false,
+    "running": true,
 
     "algorithms": [
         {
