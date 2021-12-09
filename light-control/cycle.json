@@ -1,5 +1,12 @@
 [
     {
+        "algorithm": "March",
+        "seconds_in_cycle": 600,
+        "options": {
+            "freq": 2.0
+        }
+    },
+    {
         "algorithm": "Twinkles",
         "seconds_in_cycle": 600,
         "options": {

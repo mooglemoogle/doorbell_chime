@@ -43,7 +43,7 @@ class Algorithm(Algorithm):
             else:
                 self.set_color(pixel, count)
                 count += 1
-                if count > num_colors:
+                if count >= num_colors:
                     count = 0
 
         self.cycle += 1
