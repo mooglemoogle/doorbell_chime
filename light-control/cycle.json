@@ -10,7 +10,7 @@
         "algorithm": "Twinkles",
         "seconds_in_cycle": 600,
         "options": {
-            "density": 0.01,
+            "density": 0.03,
             "freq": 0.25,
             "fadeTime": 2.0
         }

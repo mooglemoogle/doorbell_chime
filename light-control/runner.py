@@ -109,7 +109,7 @@ class Runner():
         for strip in self.light_strips:
             strip.apply_lights(pixels, self.brightness())
             if (is_dev_mode):
-                self.logger.log(logging.DEBUG, print_colors(strip.pixels))
+                print(print_colors(strip.pixels), end='\r')
     
     def __on_config_update(self):
         running = self.config.get_value('running')

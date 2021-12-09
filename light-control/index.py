@@ -1,4 +1,5 @@
-import logging
+import logging.config
+import os
 from timer import Timer
 
 from dotenv import load_dotenv
@@ -6,8 +7,13 @@ load_dotenv()
 
 from runner import Runner
 
+is_dev_mode = os.getenv("MODE") == "DEVELOPMENT"
+
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s|%(name)s|%(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+    if is_dev_mode:
+        logging.config.fileConfig('dev-logging.conf')
+    else:
+        logging.config.fileConfig('logging.conf')
 
     timer = Timer(60)
     runner = Runner()
