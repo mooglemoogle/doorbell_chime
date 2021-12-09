@@ -1,6 +1,6 @@
 [
     {
-        "algorithm": "White",
+        "algorithm": "Twinkles",
         "seconds_in_cycle": 600,
         "options": {
             "density": 0.05,

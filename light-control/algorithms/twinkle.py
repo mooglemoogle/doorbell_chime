@@ -10,9 +10,7 @@ class Algorithm(Algorithm):
         self.num_twinkles = math.ceil(settings['density'] * num_pixels)
         self.freq = settings['freq']
         self.fade_per_cycle = 1.0 / (settings['fadeTime'] * self.refresh_rate())
-        self.twinkles = []
-        for n in range(num_pixels):
-            self.twinkles[n] = 0
+        self.twinkles = [0] * num_pixels
         
         self.choose_twinkles()
 
