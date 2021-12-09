@@ -28,15 +28,21 @@ def print_colors(colors: neopixel.NeoPixel):
 class Runner():
     def __init__(self) -> None:
         self.logger = logging.getLogger(__name__)
+
+        with open('algorithms/algorithm_configs.json', 'r') as json_config:
+            self.algorithms = json.load(json_config)
+            self.alg_names = [a['name'] for a in self.algorithms]
+            self.alg_map = {a['name']: a for a in self.algorithms}
+
         self.config = Config()
         self.cycle = Cycle()
         self.cycle_index = 0
         self.__initialize_light_strips()
-        self.__off_alg = Off('Off', self.num_pixels(), self.config.alg_map['Off'], {})
+        self.__off_alg = Off('Off', self.num_pixels(), self.alg_map['Off'], {})
         self.__transition_alg = Transition(
             'Transition',
             self.num_pixels(),
-            self.config.alg_map['Transition'],
+            self.alg_map['Transition'],
             {'transition_time': self.transition_time()}
         )
         self.__cur_alg = self.__off_alg
@@ -79,7 +85,7 @@ class Runner():
             self.cycle_index = 0
         next_alg = cycle[self.cycle_index]
         self.__next_cycle_length = next_alg['seconds_in_cycle']
-        next_alg_config = self.config.alg_map[next_alg['algorithm']]
+        next_alg_config = self.alg_map[next_alg['algorithm']]
 
         next_alg_module = load_algorithm(next_alg_config)
         self.__next_alg = next_alg_module.Algorithm(next_alg['algorithm'], self.num_pixels(), next_alg_config, next_alg['options'])
@@ -160,3 +166,4 @@ class Runner():
     
     def destroy(self):
         self.config.destroy()
+        self.cycle.destroy()

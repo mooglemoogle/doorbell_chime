@@ -51,10 +51,6 @@ class Config:
         for key, value in data.items():
             self.properties[key] = value
 
-        self.algorithms = self.properties['algorithms']
-        self.alg_names = [a['name'] for a in self.algorithms]
-        self.alg_map = {a['name']: a for a in self.algorithms}
-
         self.__logger.log(logging.DEBUG, 'Config parameters updated!')
 
 

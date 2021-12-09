@@ -3,6 +3,12 @@
         "algorithm": "March",
         "seconds_in_cycle": 600,
         "options": {
+            "colors": [
+                [0.333, 0.929, 0.663],
+                [0, 0.937, 0.808],
+                [0.142, 1.0, 1.0],
+                [0.677, 0.833, 0.871]
+            ],
             "freq": 2.0
         }
     },
@@ -10,9 +16,22 @@
         "algorithm": "Twinkles",
         "seconds_in_cycle": 600,
         "options": {
-            "density": 0.03,
+            "density": 0.01,
             "freq": 0.25,
             "fadeTime": 2.0
+        }
+    },
+    {
+        "algorithm": "Pulse & Switch",
+        "seconds_in_cycle": 600,
+        "options": {
+            "colors": [
+                [0.333, 0.929, 0.663],
+                [0, 0.937, 0.808]
+            ],
+            "onTime": 5,
+            "pulseTime": 0.5,
+            "lightsPerColor": 2
         }
     }
 ]

@@ -6,12 +6,7 @@ from algorithms.algorithm import Algorithm
 class Algorithm(Algorithm):
     def __init__(self, name, num_pixels, alg_config, settings) -> None:
         super().__init__(name, num_pixels, alg_config, settings)
-        self.colors = [
-            (0.333, 0.929, 0.663), # Green
-            (0, 0.937, 0.808), # Red
-            (0.142, 1.0, 1.0), # Gold
-            (0.677, 0.833, 0.871), # Blue
-        ]
+        self.colors = settings['colors']
         self.cycle = 0
         self.since_change = 0
         self.cycle_time = settings['freq']
