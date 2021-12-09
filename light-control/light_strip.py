@@ -19,8 +19,12 @@ class LightStrip:
         self.gpio_pin = config["gpio_pin"]
         self.bpp = config["bpp"]
         self.order = config["order"]
+        self.skip = config["skip"]
 
         self.__generate_pixels()
+
+        for ind in self.skip:
+            self.pixels[ind] = (0, 0, 0)
 
     def num_pixels(self):
         return abs(self.index_end - self.index_start) + 1
@@ -53,6 +57,8 @@ class LightStrip:
     def apply_lights(self, lights: List[Pixel], brightness: float):
         index_ranges = self.get_ranges()
         for (light_ind, pixel_ind) in index_ranges:
+            if pixel_ind in self.skip:
+                continue
             pixel = lights[pixel_ind]
             nc = colorsys.hsv_to_rgb(pixel.hue, pixel.sat, brightness * pixel.val)
             if self.bpp == 3:
