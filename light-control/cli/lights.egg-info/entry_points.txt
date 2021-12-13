@@ -1,0 +1,3 @@
+[console_scripts]
+lights = lights:cli
+

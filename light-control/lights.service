@@ -3,8 +3,10 @@ Description=Light Control
 After=multi-user.target
 
 [Service]
+User=root
 Type=simple
 Restart=always
+WorkingDirectory=/home/pi/projects/doorbell_chime/light-control/
 ExecStart=/usr/local/bin/pipenv run python /home/pi/projects/doorbell_chime/light-control/index.py
 
 [Install]

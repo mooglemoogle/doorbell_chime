@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 from watchdog.observers import Observer
 from config import ConfigWatcher
 
@@ -34,6 +35,7 @@ class Cycle:
 
     def __load_cycle_config(self):
         self.__logger.log(logging.DEBUG, 'Config file %s updated. Loading parameters', self.__cycle_config_path)
+        time.sleep(0.1)
         with open(self.__cycle_config_path, 'r') as json_config:
             data = json.load(json_config)
 

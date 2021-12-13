@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
@@ -45,6 +46,7 @@ class Config:
 
     def __load_config_file(self):
         self.__logger.log(logging.DEBUG, 'Config file %s updated. Loading parameters', self.__config_file_path)
+        time.sleep(0.1)
         with open('config.json', 'r') as json_config:
             data = json.load(json_config)
 
