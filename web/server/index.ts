@@ -2,6 +2,7 @@ import express, { json } from 'express';
 import cors from 'cors';
 import { StatusCodes } from 'http-status-codes';
 import { config } from 'dotenv';
+import { resolve } from 'path';
 
 config();
 
@@ -14,10 +15,12 @@ app.use(
     cors({
         origin: process.env.CLIENT_URL,
         optionsSuccessStatus: StatusCodes.OK,
-    })
+    }),
 );
 
 app.use(routes());
+
+app.use(express.static(resolve(__dirname, '../client/dist')));
 
 app.use('*', (req, res) => {
     res.status(StatusCodes.NOT_FOUND).send('404 Not Found');

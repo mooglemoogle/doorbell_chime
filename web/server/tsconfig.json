@@ -9,9 +9,12 @@
         "outDir": "dist",
         "baseUrl": ".",
         "paths": {
-            "*": ["node_modules/*"]
-        }
+            "*": ["node_modules/*"],
+            "@app": [""],
+            "@app/*": ["*"],
+            "@app/routes/*": ["routes/*"]
+        },
+        "plugins": [{ "transform": "typescript-transform-paths" }]
     },
-    "include": ["server/**/*"],
-    "plugins": [{ "transform": "typescript-transform-paths" }]
+    "include": ["./**/*"],
 }

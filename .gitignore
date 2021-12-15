@@ -1,5 +1,7 @@
 **/__pycache__/**
 **/node_modules
 
+web/client/dist
+
 **/.env
 **/*.log*
