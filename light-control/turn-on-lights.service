@@ -1,0 +1,12 @@
+[Unit]
+Description=Turn On Lights
+Wants=turn-on-lights.timer
+
+[Service]
+User=root
+Type=oneshot
+WorkingDirectory=/home/pi/projects/doorbell_chime/light-control/
+ExecStart=/usr/local/bin/pipenv run lights on
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,10 @@
+[Unit]
+Description=Turn On Lights At 
+Requires=turn-on-lights.service
+
+[Timer]
+Unit=turn-on-lights.service
+OnCalendar=*-*-* 16:30:00
+
+[Install]
+WantedBy=timers.target
