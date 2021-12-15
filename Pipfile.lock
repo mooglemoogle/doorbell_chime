@@ -1,12 +1,10 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "0481fd6ab2e813838dd94de91aef106af69532aac4e3f8ec13d9876227327092"
+            "sha256": "a476d6fb1ea4e432040d44072b671109acaaaae2b98b938aa193f4f955efd8d1"
         },
         "pipfile-spec": 6,
-        "requires": {
-            "python_version": "3.7"
-        },
+        "requires": {},
         "sources": [
             {
                 "name": "pypi",
@@ -16,39 +14,12 @@
         ]
     },
     "default": {
-        "adafruit-blinka": {
-            "hashes": [
-                "sha256:54d1db8679e50f7b6ff6ac9580ecabfed2dd657eeb6edd3e62bf2a4fdb59b237"
-            ],
-            "markers": "python_full_version >= '3.7.0'",
-            "version": "==6.16.0"
-        },
         "adafruit-circuitpython-neopixel": {
             "hashes": [
                 "sha256:80268e5bd6584a36d7e4d71eff9423016538c765798cb2c158d800cce75e7df0"
             ],
-            "index": "pypi",
+            "markers": "platform_machine == 'armv6l' or platform_machine == 'armv7l'",
             "version": "==6.2.3"
-        },
-        "adafruit-circuitpython-pixelbuf": {
-            "hashes": [
-                "sha256:8c6778db7c7cbf9455b617c9fe9461be1677b3faaa0a850188c40b03f070c88f"
-            ],
-            "version": "==1.1.1"
-        },
-        "adafruit-platformdetect": {
-            "hashes": [
-                "sha256:200f38eb3345981a9251cd285c9d1e039c23e8fcd0dbc8f13b6db3e5634e4f6e"
-            ],
-            "markers": "python_version >= '3.6'",
-            "version": "==3.17.2"
-        },
-        "adafruit-pureio": {
-            "hashes": [
-                "sha256:2caf22fb07c7f771d83267f331a76cde314723f884a9570ea6f768730c87a879"
-            ],
-            "markers": "python_version >= '3.5'",
-            "version": "==1.1.9"
         },
         "click": {
             "hashes": [
@@ -58,29 +29,6 @@
             "index": "pypi",
             "version": "==8.0.3"
         },
-        "importlib-metadata": {
-            "hashes": [
-                "sha256:53ccfd5c134223e497627b9815d5030edf77d2ed573922f7a0b8f8bb81a1c100",
-                "sha256:75bdec14c397f528724c1bfd9709d660b33a4d2e77387a3358f20b848bb5e5fb"
-            ],
-            "markers": "python_version < '3.8'",
-            "version": "==4.8.2"
-        },
-        "pyftdi": {
-            "hashes": [
-                "sha256:4ef20c246bdb0f278d283337d7a6e69cf9bdb0ead525e7ad867d9e46ad26e613",
-                "sha256:6e86880ec6d66389de643ca83de5d59fffea3bd334f492e12fab71a832f878a2"
-            ],
-            "markers": "python_version >= '3.6'",
-            "version": "==0.53.3"
-        },
-        "pyserial": {
-            "hashes": [
-                "sha256:3c77e014170dfffbd816e6ffc205e9842efb10be9f58ec16d3e8675b4925cddb",
-                "sha256:c4451db6ba391ca6ca299fb3ec7bae67a5c55dde170964c7a14ceefec02f2cf0"
-            ],
-            "version": "==3.5"
-        },
         "python-dotenv": {
             "hashes": [
                 "sha256:32b2bdc1873fd3a3c346da1c6db83d0053c3c62f28f1f38516070c4c8971b1d3",
@@ -89,46 +37,14 @@
             "index": "pypi",
             "version": "==0.19.2"
         },
-        "pyusb": {
-            "hashes": [
-                "sha256:2b4c7cb86dbadf044dfb9d3a4ff69fd217013dbe78a792177a3feb172449ea36",
-                "sha256:a4cc7404a203144754164b8b40994e2849fde1cfff06b08492f12fff9d9de7b9"
-            ],
-            "markers": "python_version >= '3.6'",
-            "version": "==1.2.1"
-        },
         "rpi-ws281x": {
             "hashes": [
                 "sha256:0d1b68d2912bf56ba9078c4117720e1de29cef56af222fef64e767307ab88fda",
                 "sha256:689f3f4a81c70adc830694140d9de84d0dbc3b8b4ece4fc3d1ef43b2348ce9ab",
                 "sha256:d403bd2a45e70ec672ecc0dc2757f218d8c07401dcb2711599523e9f34c4579c"
             ],
-            "index": "pypi",
+            "markers": "platform_machine == 'armv6l' or platform_machine == 'armv7l'",
             "version": "==4.3.1"
-        },
-        "rpi.gpio": {
-            "hashes": [
-                "sha256:7424bc6c205466764f30f666c18187a0824077daf20b295c42f08aea2cb87d3f"
-            ],
-            "version": "==0.7.0"
-        },
-        "sysv-ipc": {
-            "hashes": [
-                "sha256:0f063cbd36ec232032e425769ebc871f195a7d183b9af32f9901589ea7129ac3",
-                "sha256:30611dccecd8fa0dc9f83d4d465e5047692df0ec9a095abef8b90ccc64afbdaf",
-                "sha256:4bbbe4e5ad5ab859e6d21fc8ff3e3b01082b959fa5c2cd76289dbcd56350c5f9",
-                "sha256:61190b934b0277f7a189092dcabceee8d9736fd73de90fd9b50ea69f0bac4723",
-                "sha256:ff6e3c98d8aa3e1ae5378d86869c4699c76f94318705d08085c97fb010770a31"
-            ],
-            "version": "==1.1.0"
-        },
-        "typing-extensions": {
-            "hashes": [
-                "sha256:4ca091dea149f945ec56afb48dae714f21e8692ef22a395223bcd328961b6a0e",
-                "sha256:7f001e5ac290a0c0401508864c7ec868be4e701886d5b573a9528ed3973d9d3b"
-            ],
-            "markers": "python_version < '3.8'",
-            "version": "==4.0.1"
         },
         "watchdog": {
             "hashes": [
@@ -158,14 +74,6 @@
             ],
             "index": "pypi",
             "version": "==2.1.6"
-        },
-        "zipp": {
-            "hashes": [
-                "sha256:71c644c5369f4a6e07636f0aa966270449561fcea2e3d6747b8d23efaa9d7832",
-                "sha256:9fe5ea21568a0a70e50f273397638d39b03353731e6cbbb3fd8502a33fec40bc"
-            ],
-            "markers": "python_version >= '3.6'",
-            "version": "==3.6.0"
         }
     },
     "develop": {}

@@ -4,13 +4,8 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-rpi-ws281x = "*"
-adafruit-circuitpython-neopixel = "*"
+rpi-ws281x = {version="*", markers="platform_machine == 'armv6l' or platform_machine == 'armv7l'"}
+adafruit-circuitpython-neopixel = {version="*", markers="platform_machine == 'armv6l' or platform_machine == 'armv7l'"}
 watchdog = "*"
 python-dotenv = "*"
 click = "*"
-
-[dev-packages]
-
-[requires]
-python_version = "3.7"

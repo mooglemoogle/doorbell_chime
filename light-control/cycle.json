@@ -1,6 +1,6 @@
 [
     {
-        "algorithm": "March",
+        "algorithm": "march",
         "seconds_in_cycle": 600,
         "options": {
             "colors": [
@@ -13,7 +13,7 @@
         }
     },
     {
-        "algorithm": "Twinkles",
+        "algorithm": "twinkles",
         "seconds_in_cycle": 600,
         "options": {
             "density": 0.01,
@@ -22,7 +22,7 @@
         }
     },
     {
-        "algorithm": "Pulse & Switch",
+        "algorithm": "pulse_switch",
         "seconds_in_cycle": 600,
         "options": {
             "colors": [

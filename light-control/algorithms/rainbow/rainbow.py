@@ -1,10 +1,11 @@
 import logging
 
-from algorithms.algorithm import Algorithm
+from .config import config
+from .._meta import BaseAlgorithm
 
-class Algorithm(Algorithm):
-    def __init__(self, name, num_pixels, alg_config, settings) -> None:
-        super().__init__(name, num_pixels, alg_config, settings)
+class Algorithm(BaseAlgorithm):
+    def __init__(self, num_pixels, settings) -> None:
+        super().__init__(num_pixels, config, settings)
         per_item = 1.0 / num_pixels
         for n in range(num_pixels):
             pixel = self.pixels[n]

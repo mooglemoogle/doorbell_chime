@@ -7,8 +7,8 @@ class Pixel:
     white = 0.0
 
     def get_rgb(self, brightness):
-        max_val = 255 * brightness
-        rgb = colorsys.hsv_to_rgb(self.hue, self.sat, self.val)
+        max_val = 255
+        rgb = colorsys.hsv_to_rgb(self.hue, self.sat, self.val * brightness)
         return (rgb[0] * max_val, rgb[1] * max_val, rgb[2] * max_val)
     
     def get_rgbw(self, brightness):

@@ -1,6 +1,6 @@
 [
     {
-        "algorithm": "Rainbow",
+        "algorithm": "rainbow",
         "seconds_in_cycle": 30,
         "options": {
             "speed": 100,
@@ -8,7 +8,7 @@
         }
     },
     {
-        "algorithm": "Split Rainbow",
+        "algorithm": "split_rainbow",
         "seconds_in_cycle": 30,
         "options": {
             "speed": 100,

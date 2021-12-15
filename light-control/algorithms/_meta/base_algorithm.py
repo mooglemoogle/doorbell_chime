@@ -1,12 +1,12 @@
 import logging
-from algorithms.pixel import Pixel
-from algorithms.helpers import get_millis
+from .pixel import Pixel
+from .helpers import get_millis
 
-class Algorithm:
-    def __init__(self, name, num_pixels, alg_config, settings) -> None:
+class BaseAlgorithm:
+    def __init__(self, num_pixels, alg_config, settings) -> None:
         self.logger = logging.getLogger(__name__)
-        self.logger.log(logging.INFO, f'Initializing algorithm {name:s}')
-        self.name = name
+        self.name = alg_config['name']
+        self.logger.log(logging.INFO, f'Initializing algorithm {self.name:s}')
         self.config = alg_config
         self.__settings = settings
         self.__last_cycle_time = 0
@@ -14,7 +14,7 @@ class Algorithm:
         self.pixels = [Pixel() for _ in range(num_pixels)]
     
     def refresh_rate(self):
-        return self.config['refresh_rate']
+        return self.__settings.get('refresh_rate', self.config['refresh_rate'])
 
     def settings(self):
         return self.__settings

@@ -1,16 +1,23 @@
 import json
 import logging
 import time
+import os
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+from debounce import debounce
 
 class ConfigWatcher(FileSystemEventHandler):
     def __init__(self, config_path, watcher):
-        self.__config_path = config_path
+        self.__config_path = os.path.abspath(config_path)
         self.__watcher = watcher
         super()
 
+    def on_any_event(self, event):
+        print(event)
+        return super().on_any_event(event)
+
     def on_modified(self, event):
+        print(event)
         if not event.is_directory and event.src_path == self.__config_path:
             self.__watcher.reload()
         return super().on_modified(event)
@@ -28,8 +35,7 @@ class Config:
         self.__config_file_path = path
 
     def reload(self):
-        self.__load_config_file()
-        self.updated = True
+        self._debounced_load()
     
     def get_value(self, key):
         return self.properties[key]
@@ -39,14 +45,19 @@ class Config:
         self.__observer.join()
     
     def __initialize_observer(self):
+        path = os.path.dirname(self.__config_file_path)
         self.__handler = ConfigWatcher(self.__config_file_path, self)
         self.__observer = Observer()
-        self.__observer.schedule(self.__handler, self.__config_file_path)
+        self.__observer.schedule(self.__handler, path)
         self.__observer.start()
+
+    @debounce(0.1)
+    def _debounced_load(self):
+        self.__load_config_file()
+        self.updated = True
 
     def __load_config_file(self):
         self.__logger.log(logging.DEBUG, 'Config file %s updated. Loading parameters', self.__config_file_path)
-        time.sleep(0.1)
         with open('config.json', 'r') as json_config:
             data = json.load(json_config)
 

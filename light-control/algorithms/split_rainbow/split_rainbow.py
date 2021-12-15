@@ -2,11 +2,12 @@
 # import logging
 import math
 
-from algorithms.algorithm import Algorithm
+from .config import config
+from .._meta import BaseAlgorithm
 
-class Algorithm(Algorithm):
-    def __init__(self, name, num_pixels, alg_config, settings) -> None:
-        super().__init__(name, num_pixels, alg_config, settings)
+class Algorithm(BaseAlgorithm):
+    def __init__(self, num_pixels, settings) -> None:
+        super().__init__(num_pixels, config, settings)
         self.num = len(self.pixels)
         middle = self.num / 2
         floor_middle = math.floor(middle)

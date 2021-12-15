@@ -1,11 +1,12 @@
 import logging
 import math
 
-from algorithms.algorithm import Algorithm
+from .config import config
+from .._meta import BaseAlgorithm
 
-class Algorithm(Algorithm):
-    def __init__(self, name, num_pixels, alg_config, settings) -> None:
-        super().__init__(name, num_pixels, alg_config, settings)
+class Algorithm(BaseAlgorithm):
+    def __init__(self, num_pixels, settings) -> None:
+        super().__init__(num_pixels, config, settings)
         self.even_cycle = True
         self.fade_percent = 1.0
         self.colors = settings['colors']

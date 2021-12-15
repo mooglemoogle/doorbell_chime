@@ -1,11 +1,35 @@
 import os
 import colorsys
 from typing import List
-import neopixel
-import board
-from algorithms.pixel import Pixel
+from algorithms._meta.pixel import Pixel
 
 is_dev_mode = os.getenv("MODE") == "DEVELOPMENT"
+
+if not is_dev_mode:
+    import neopixel
+    import board
+
+class DemoPixels:
+    def __getitem__(self, key):
+        return self._pixels[key]
+    
+    def __setitem__(self, key, value):
+        if len(value) == 3:
+            r, g, b = value
+            self._pixels[key] = (int(r), int(g), int(b))
+        if len(value) == 4:
+            r, g, b, w = value
+            self._pixels[key] = (int(r), int(g), int(b), int(w))
+
+    def __init__(self, num_pixels, bpp):
+        self._pixels = []
+        self.n = num_pixels
+        self.bpp = bpp
+        for i in range(num_pixels):
+            if (bpp == 3):
+                self._pixels.append((0, 0, 0))
+            elif (bpp == 4):
+                self._pixels.append((0, 0, 0, 0))
 
 class LightStrip:
     def __init__(self, strip_index: int, config):
@@ -30,19 +54,28 @@ class LightStrip:
         return abs(self.index_end - self.index_start) + 1
 
     def board_pin(self):
-        return getattr(board, self.gpio_pin)
+        if is_dev_mode:
+            return self.gpio_pin
+        else:
+            return getattr(board, self.gpio_pin)
     
     def pixel_order(self):
-        return getattr(neopixel, self.order)
+        if is_dev_mode:
+            return self.order
+        else:
+            return getattr(neopixel, self.order)
     
     def __generate_pixels(self):
-        self.pixels = neopixel.NeoPixel(
-            self.board_pin(),
-            self.num_pixels(),
-            bpp=self.bpp,
-            pixel_order=self.pixel_order(),
-            auto_write=False
-        )
+        if is_dev_mode:
+            self.pixels = DemoPixels(self.num_pixels(), self.bpp)
+        else:
+            self.pixels = neopixel.NeoPixel(
+                self.board_pin(),
+                self.num_pixels(),
+                bpp=self.bpp,
+                pixel_order=self.pixel_order(),
+                auto_write=False
+            )
     
     def get_ranges(self):
         reversed = self.index_end < self.index_start

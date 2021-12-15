@@ -1,16 +1,16 @@
-from algorithms.algorithm import Algorithm
-from algorithms.helpers import get_millis, bezier_blend
+from ._meta import BaseAlgorithm
+from ._meta.helpers import get_millis, bezier_blend
 
-class Algorithm(Algorithm):
-    def __init__(self, name, num_pixels, alg_config, settings) -> None:
-        super().__init__(name, num_pixels, alg_config, settings)
+class Algorithm(BaseAlgorithm):
+    def __init__(self, num_pixels, settings) -> None:
+        super().__init__(num_pixels, config, settings)
 
         self.__previous_pixels = []
         self.__next_pixels = []
         self.__start_time = 0
 
     def update_transition_time(self, new_val):
-        self.__settings['transition_time'] = new_val
+        self.settings()['transition_time'] = new_val
     
     def transition_time(self):
         return self.settings()['transition_time']
@@ -47,4 +47,8 @@ class Algorithm(Algorithm):
                 pixel.white = prev.white + (next.white - prev.white) * light_percent
             return False
 
-
+config = {
+    "name": "Transition",
+    "options": {},
+    "refresh_rate": 60
+}

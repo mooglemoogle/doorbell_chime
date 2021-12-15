@@ -1,5 +1,4 @@
 import logging
-import neopixel
 from importlib import import_module
 from config import Config
 from cycle import Cycle
@@ -10,17 +9,13 @@ from functools import reduce
 
 import os
 
-from algorithms.off import Algorithm as Off
-from algorithms.transition import Algorithm as Transition
+from algorithms import algorithms
 
 from light_strip import LightStrip
 
 is_dev_mode = os.getenv("MODE") == "DEVELOPMENT"
 
-def load_algorithm(alg_config):
-    return import_module('algorithms.' + alg_config['module'])
-
-def print_colors(colors: neopixel.NeoPixel):
+def print_colors(colors):
     return ''.join([
         '\033[48;2;{0:d};{1:d};{2:d}m  \033[0m'.format(*(colors[n])) for n in range(colors.n)
     ])
@@ -29,20 +24,13 @@ class Runner():
     def __init__(self) -> None:
         self.logger = logging.getLogger(__name__)
 
-        with open('algorithms/algorithm_configs.json', 'r') as json_config:
-            self.algorithms = json.load(json_config)
-            self.alg_names = [a['name'] for a in self.algorithms]
-            self.alg_map = {a['name']: a for a in self.algorithms}
-
         self.config = Config()
         self.cycle = Cycle()
         self.cycle_index = 0
         self.__initialize_light_strips()
-        self.__off_alg = Off('Off', self.num_pixels(), self.alg_map['Off'], {})
-        self.__transition_alg = Transition(
-            'Transition',
+        self.__off_alg = algorithms['off'].Algorithm(self.num_pixels(), {})
+        self.__transition_alg = algorithms['transition'].Algorithm(
             self.num_pixels(),
-            self.alg_map['Transition'],
             {'transition_time': self.transition_time()}
         )
         self.__cur_alg = self.__off_alg
@@ -85,10 +73,9 @@ class Runner():
             self.cycle_index = 0
         next_alg = cycle[self.cycle_index]
         self.__next_cycle_length = next_alg['seconds_in_cycle']
-        next_alg_config = self.alg_map[next_alg['algorithm']]
+        next_alg_module = algorithms[next_alg['algorithm']]
 
-        next_alg_module = load_algorithm(next_alg_config)
-        self.__next_alg = next_alg_module.Algorithm(next_alg['algorithm'], self.num_pixels(), next_alg_config, next_alg['options'])
+        self.__next_alg = next_alg_module.Algorithm(self.num_pixels(), next_alg['options'])
         self.__start_transition()
 
     def turn_off(self):
