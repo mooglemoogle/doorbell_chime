@@ -9,7 +9,7 @@
             "skip": []
         }
     ],
-    "brightness": 0.61,
+    "brightness": 0.5,
     "transition_time": 2000,
-    "running": true
+    "running": false
 }

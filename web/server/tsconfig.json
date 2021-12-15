@@ -10,11 +10,11 @@
         "baseUrl": ".",
         "paths": {
             "*": ["node_modules/*"],
-            "@app": [""],
-            "@app/*": ["*"],
-            "@app/routes/*": ["routes/*"]
+            "@app": ["src"],
+            "@app/*": ["src/*"],
+            "@app/routes/*": ["src/routes/*"]
         },
         "plugins": [{ "transform": "typescript-transform-paths" }]
     },
-    "include": ["./**/*"],
+    "include": ["src/**/*"],
 }

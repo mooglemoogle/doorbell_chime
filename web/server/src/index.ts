@@ -20,7 +20,7 @@ app.use(
 
 app.use(routes());
 
-app.use(express.static(resolve(__dirname, '../client/dist')));
+app.use(express.static(resolve(__dirname, '../../client/dist')));
 
 app.use('*', (req, res) => {
     res.status(StatusCodes.NOT_FOUND).send('404 Not Found');

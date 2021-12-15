@@ -4,7 +4,7 @@ import { Router } from 'express';
 import { readFile, open } from 'fs/promises';
 import path from 'path';
 
-const CONFIG_PATH = path.join(__dirname, '../../../light-control/config.json');
+const CONFIG_PATH = path.join(__dirname, '../../../../light-control/config.json');
 const ON_VALS = ['true', 'on', 'yes', 't', 'y'];
 const OFF_VALS = ['false', 'off', 'no', 'f', 'n'];
 
