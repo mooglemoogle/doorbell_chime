@@ -8,17 +8,16 @@
         "lint": "eslint './src/**/*.{js,ts,tsx}' --quiet",
         "dev": "webpack watch --mode development --devtool cheap-module-source-map"
     },
-    "dependencies": {
-        "@blueprintjs/core": "^3.52.0",
-        "@emotion/react": "^11.7.1"
-    },
+    "dependencies": {},
     "devDependencies": {
         "@babel/cli": "^7.16.0",
         "@babel/core": "^7.16.0",
         "@babel/preset-env": "^7.16.4",
         "@babel/preset-react": "^7.16.0",
         "@babel/preset-typescript": "^7.16.0",
+        "@blueprintjs/core": "^3.52.0",
         "@emotion/babel-plugin": "^11.7.1",
+        "@emotion/react": "^11.7.1",
         "@types/react": "^17.0.37",
         "@types/react-dom": "^17.0.11",
         "@typescript-eslint/eslint-plugin": "^5.4.0",
@@ -31,7 +30,6 @@
         "eslint-plugin-react": "^7.27.1",
         "file-loader": "^6.2.0",
         "html-webpack-plugin": "^5.5.0",
-        "image-webpack-loader": "^8.0.1",
         "prettier": "^2.5.0",
         "react": "^17.0.2",
         "react-dom": "^17.0.2",
