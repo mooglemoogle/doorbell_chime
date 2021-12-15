@@ -1,7 +1,6 @@
 **/__pycache__/**
 **/node_modules
 
-web/client/dist
 web/server/dist
 
 **/.env

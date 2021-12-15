@@ -23,7 +23,7 @@ const updateSettings = async (newSettings: Partial<LightsSettings>) => {
             ...newSettings,
         };
         await file.truncate();
-        return file.write(JSON.stringify(updated, null, 4), 0, 'utf-8');
+        return file.write(JSON.stringify(updated, null, 4), 0, 'utf-8').then(() => file.close());
     });
 };
 
