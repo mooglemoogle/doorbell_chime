@@ -1,13 +1,13 @@
 import logging
-from importlib import import_module
-from config import Config
-from cycle import Cycle
 import json
 import time
 import math
+import os
 from functools import reduce
 
-import os
+from config import Config
+from cycle import Cycle
+from command_watcher import CommandWatcher
 
 from algorithms import algorithms
 
@@ -38,6 +38,8 @@ class Runner():
         self.__last_change_time = time.time()
         self.__next_cycle_length = math.inf
         self.__refresh_algorithms()
+
+        self.commandWatcher = CommandWatcher(['next', 'off', 'on'])
     
     def num_pixels(self):
         return reduce(lambda acc, strip: acc + strip.num_pixels(), self.light_strips, 0)
@@ -123,6 +125,17 @@ class Runner():
         if running and not self.is_off():
             self.logger.log(logging.INFO, "Reseting algorithm cycle")
             self.next_algorithm()
+
+    def __on_commands(self):
+        for command in self.commandWatcher.commands_received:
+            if command == 'next':
+                self.next_algorithm()
+            elif command == 'off' and not self.is_off():
+                self.turn_off()
+            elif command == 'on' and self.is_off():
+                self.next_algorithm()
+            
+            self.commandWatcher.mark_complete(command)
     
     def run_cycle(self):
         this_cycle_time = time.time()
@@ -136,6 +149,10 @@ class Runner():
         if self.cycle.updated:
             self.__on_cycle_update()
             self.cycle.updated = False
+        
+        self.commandWatcher.check_messages()
+        if self.commandWatcher.commands_received:
+            self.__on_commands()
 
         if not self.is_off():
             result = self.__cur_alg.run_cycle(elapsed * 1000.0, elapsed)
@@ -154,3 +171,4 @@ class Runner():
     def destroy(self):
         self.config.destroy()
         self.cycle.destroy()
+        self.commandWatcher.destroy()

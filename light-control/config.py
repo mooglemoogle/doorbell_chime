@@ -12,12 +12,7 @@ class ConfigWatcher(FileSystemEventHandler):
         self.__watcher = watcher
         super()
 
-    def on_any_event(self, event):
-        print(event)
-        return super().on_any_event(event)
-
     def on_modified(self, event):
-        print(event)
         if not event.is_directory and event.src_path == self.__config_path:
             self.__watcher.reload()
         return super().on_modified(event)

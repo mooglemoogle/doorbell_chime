@@ -9,3 +9,4 @@ adafruit-circuitpython-neopixel = {version="*", markers="platform_machine == 'ar
 watchdog = "*"
 python-dotenv = "*"
 click = "*"
+pyzmq = "*"
