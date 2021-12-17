@@ -2,7 +2,7 @@
     "light_strips": [
         {
             "index_start": 0,
-            "index_end": 50,
+            "index_end": 269,
             "gpio_pin": "D18",
             "bpp": 3,
             "order": "GRB",
@@ -11,5 +11,5 @@
     ],
     "brightness": 0.5,
     "transition_time": 2000,
-    "running": true
+    "running": false
 }

@@ -1,9 +1,10 @@
 import json
 import logging
+from typing import List
 import zmq
 
 class CommandWatcher:
-    def __init__(self, available_commands: list[str], queue_port=5555):
+    def __init__(self, available_commands: List[str], queue_port=5555):
         self.commands_received = []
         self._available_commands = available_commands
         self.__logger = logging.getLogger()
