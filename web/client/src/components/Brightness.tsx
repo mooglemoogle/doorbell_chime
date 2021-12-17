@@ -7,6 +7,10 @@ const formatLabel = (value: number) => {
     return `${value}%`;
 };
 
+const formatValue = (value: number) => {
+    return (value / 100.0).toFixed(2);
+};
+
 export const Brightness: FC = () => {
     const [brightness, setBrightness] = useState(0.0);
     const [hasFetched, setHasFetched] = useState(false);
@@ -18,12 +22,14 @@ export const Brightness: FC = () => {
                 setHasFetched(true);
                 setBrightness(brightness);
             });
-    });
+    }, []);
+    const updateLocalBrightness = useCallback((value: number) => {
+        setBrightness(parseFloat(formatValue(value)));
+    }, []);
     const updateBrightness = useCallback(
         (value: number) => {
             setHasFetched(false);
-            fetch(`/api/settings/brightness/${(value / 100.0).toFixed(2)}`, { method: 'POST' }).then(() => {
-                setBrightness(value);
+            fetch(`/api/settings/brightness/${brightness.toFixed(2)}`, { method: 'POST' }).then(() => {
                 setHasFetched(true);
             });
         },
@@ -38,7 +44,8 @@ export const Brightness: FC = () => {
                 stepSize={1}
                 labelStepSize={20}
                 labelRenderer={formatLabel}
-                value={brightness * 100}
+                value={parseInt((brightness * 100).toFixed(0))}
+                onChange={updateLocalBrightness}
                 onRelease={updateBrightness}
             />
         </FormGroup>
