@@ -4,6 +4,7 @@ import { FC } from 'react';
 import { SystemOn } from './SystemOn';
 import { Brightness } from './Brightness';
 import { H2 } from '@blueprintjs/core';
+import { Command } from './Command';
 
 export const App: FC = () => {
     return (
@@ -25,6 +26,9 @@ export const App: FC = () => {
                 </div>
                 <div css={{ marginBottom: '30px' }}>
                     <Brightness />
+                </div>
+                <div css={{ marginBottom: '30px' }}>
+                    <Command commandName="next" label="Next Pattern" />
                 </div>
             </div>
         </div>

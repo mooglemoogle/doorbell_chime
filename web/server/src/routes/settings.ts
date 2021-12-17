@@ -1,8 +1,7 @@
-import { LightsSettings } from '@app/types';
 import { Router } from 'express';
-
 import { readFile, open } from 'fs/promises';
 import path from 'path';
+import { LightsSettings } from '@app/types';
 
 const CONFIG_PATH = path.join(__dirname, '../../../../light-control/config.json');
 const ON_VALS = ['true', 'on', 'yes', 't', 'y'];
