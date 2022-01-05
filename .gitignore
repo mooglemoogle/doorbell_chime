@@ -3,5 +3,8 @@
 
 web/server/dist
 
+light-control/status.json
+light-control/light_config.json
+
 **/.env
 **/*.log*

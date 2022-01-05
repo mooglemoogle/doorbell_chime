@@ -37,17 +37,17 @@ class CommandWatcher:
         
         command = message['command'] if 'command' in message else ''
         if command in self._available_commands:
-            if command not in self.commands_received:
-                self.commands_received.append(command)
-            self.__socket.send_json({
-                'accepted': True,
-                'message': 'Good Job',
-            })
+            if message not in self.commands_received:
+                self.commands_received.append(message)
         else:
             self.__socket.send_json({
                 'accepted': False,
                 'message': 'Command not recognized',
             })
 
-    def mark_complete(self, command:str):
-        self.commands_received.remove(command)
+    def mark_complete(self, message, response = None):
+        self.commands_received.remove(message)
+        self.__socket.send_json({
+            'accepted': True,
+            'response': response
+        })

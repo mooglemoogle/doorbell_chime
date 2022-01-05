@@ -1,18 +1,21 @@
-[
-    {
-        "algorithm": "rainbow",
-        "seconds_in_cycle": 30,
-        "options": {
-            "speed": 100,
-            "reverse": false
+{
+    "name": "Default",
+    "cycles": [
+        {
+            "algorithm": "rainbow",
+            "seconds_in_cycle": 30,
+            "options": {
+                "speed": 100,
+                "reverse": false
+            }
+        },
+        {
+            "algorithm": "split_rainbow",
+            "seconds_in_cycle": 30,
+            "options": {
+                "speed": 100,
+                "reverse": false
+            }
         }
-    },
-    {
-        "algorithm": "split_rainbow",
-        "seconds_in_cycle": 30,
-        "options": {
-            "speed": 100,
-            "reverse": false
-        }
-    }
-]
+    ]
+}

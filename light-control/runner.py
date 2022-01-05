@@ -5,8 +5,9 @@ import math
 import os
 from functools import reduce
 
-from config import Config
-from cycle import Cycle
+from status import Status
+from light_config import LightConfig
+from cycles import Cycles
 from command_watcher import CommandWatcher
 
 from algorithms import algorithms
@@ -24,8 +25,10 @@ class Runner():
     def __init__(self) -> None:
         self.logger = logging.getLogger(__name__)
 
-        self.config = Config()
-        self.cycle = Cycle()
+        self.light_config = LightConfig()
+        self.status = Status()
+        self.cycles = Cycles()
+        self.current_cycle = self.cycles.get_cycle(self.status.get_value('current_cycle'))
         self.cycle_index = 0
         self.__initialize_light_strips()
         self.__off_alg = algorithms['off'].Algorithm(self.num_pixels(), {})
@@ -39,22 +42,19 @@ class Runner():
         self.__next_cycle_length = math.inf
         self.__refresh_algorithms()
 
-        self.commandWatcher = CommandWatcher(['next', 'off', 'on'])
+        self.commandWatcher = CommandWatcher(['next', 'off', 'on', 'set_brightness', 'set_cycle', 'get_status', 'get_cycles'])
     
     def num_pixels(self):
         return reduce(lambda acc, strip: acc + strip.num_pixels(), self.light_strips, 0)
 
     def brightness(self):
-        return self.config.get_value('brightness')
-    
-    def seconds_per_cycle(self):
-        return self.config.get_value('seconds_per_cycle')
+        return self.status.get_value('brightness')
     
     def transition_time(self):
-        return self.config.get_value('transition_time')
+        return self.status.get_value('transition_time')
     
     def __initialize_light_strips(self):
-        light_config = self.config.get_value('light_strips')
+        light_config = self.light_config.light_strips
         self.light_strips = [
             LightStrip(i, light_config[i])
             for i in range(len(light_config))
@@ -62,14 +62,14 @@ class Runner():
     
     def __refresh_algorithms(self):
         self.cycle_index = -1
-        cycle = self.cycle.cycles
-        if len(cycle) == 0 or not self.config.get_value('running'):
+        cycle = self.current_cycle.cycles
+        if len(cycle) == 0 or not self.status.get_value('running'):
             self.turn_off()
         else:
             self.next_algorithm()
         
     def next_algorithm(self):
-        cycle = self.cycle.cycles
+        cycle = self.current_cycle.cycles
         self.cycle_index += 1
         if self.cycle_index >= len(cycle):
             self.cycle_index = 0
@@ -106,49 +106,46 @@ class Runner():
             if (is_dev_mode):
                 print(print_colors(strip.pixels), end='\r')
     
-    def __on_config_update(self):
-        running = self.config.get_value('running')
-
-        if not running and not self.is_off():
-            self.logger.log(logging.INFO, "Config updated 'running' property to 'false'. Stopping lights")
-            self.turn_off()
-        elif running and self.is_off():
-            self.logger.log(logging.INFO, "Config updated 'running' property to 'true'. Starting lights")
-            self.next_algorithm()
-        
-        self.__transition_alg.update_transition_time(self.transition_time())
-    
-    def __on_cycle_update(self):
-        self.logger.log(logging.INFO, "Cycle file updated")
-        running = self.config.get_value('running')
+    def __change_cycle(self, cycle_name):
+        self.logger.log(logging.INFO, "Cycle changed")
+        running = self.status.get_value('running')
         self.cycle_index = -1
+        self.current_cycle = self.cycles.get_cycle(cycle_name)
         if running and not self.is_off():
             self.logger.log(logging.INFO, "Reseting algorithm cycle")
             self.next_algorithm()
 
     def __on_commands(self):
-        for command in self.commandWatcher.commands_received:
+        for message in self.commandWatcher.commands_received:
+            command = message['command']
+            response = None
             if command == 'next':
                 self.next_algorithm()
             elif command == 'off' and not self.is_off():
                 self.turn_off()
+                self.status.set_value('running', False)
             elif command == 'on' and self.is_off():
                 self.next_algorithm()
+                self.status.set_value('running', True)
+            elif command == 'set_brightness':
+                brightness = message['brightness']
+                brightness = max(0.0, min(1.0, brightness))
+                self.status.set_value('brightness', brightness)
+            elif command == 'set_cycle':
+                cycle = message['name']
+                self.status.set_value('current_cycle', cycle)
+            elif command == 'get_status':
+                response = self.status.properties
+            elif command == 'get_cycles':
+                response = self.cycles.cycle_names
             
-            self.commandWatcher.mark_complete(command)
+            self.commandWatcher.mark_complete(message, response)
     
     def run_cycle(self):
         this_cycle_time = time.time()
         since_last_change = this_cycle_time - self.__last_change_time
         # self.logger.log(logging.DEBUG, f"{since_last_change:.3f} {self.__next_cycle_length:.3f}")
         elapsed = this_cycle_time - self.__last_cycle_time
-        
-        if self.config.updated:
-            self.__on_config_update()
-            self.config.updated = False
-        if self.cycle.updated:
-            self.__on_cycle_update()
-            self.cycle.updated = False
         
         self.commandWatcher.check_messages()
         if self.commandWatcher.commands_received:
@@ -169,6 +166,5 @@ class Runner():
         self.__last_cycle_time = this_cycle_time
     
     def destroy(self):
-        self.config.destroy()
         self.cycle.destroy()
         self.commandWatcher.destroy()
