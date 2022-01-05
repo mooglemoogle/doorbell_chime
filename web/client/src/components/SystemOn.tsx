@@ -1,35 +1,33 @@
 /** @jsx jsx */
 import { jsx } from '@emotion/react';
-import { FC, useCallback, useState, useEffect, FormEvent } from 'react';
+import { FC, useCallback, useState, FormEvent } from 'react';
 import { Switch } from '@blueprintjs/core';
+import { UpdateStatusCallback } from './App';
 
-export const SystemOn: FC = () => {
-    const [isOn, setIsOn] = useState(false);
-    const [hasFetched, setHasFetched] = useState(false);
+interface SystemOnProps {
+    isOn: boolean;
+    loading: boolean;
+    updateLocalStatus: UpdateStatusCallback;
+}
 
-    useEffect(() => {
-        fetch('/api/settings/running')
-            .then(response => response.json())
-            .then(({ running }) => {
-                setHasFetched(true);
-                setIsOn(running);
-            });
-    });
+export const SystemOn: FC<SystemOnProps> = ({ isOn = false, loading, updateLocalStatus }) => {
+    const [fetching, setFetching] = useState(false);
+
     const toggleLights = useCallback(
         (event: FormEvent<HTMLInputElement>) => {
             const value = event.currentTarget.checked;
-            setHasFetched(false);
-            fetch(`/api/settings/running/${value}`, { method: 'POST' }).then(() => {
-                setIsOn(value);
-                setHasFetched(true);
+            setFetching(true);
+            fetch(`/api/actions/${value ? 'on' : 'off'}`, { method: 'POST' }).then(() => {
+                updateLocalStatus({ running: value });
+                setFetching(false);
             });
         },
-        [isOn],
+        [isOn, updateLocalStatus],
     );
     return (
         <Switch
             large
-            disabled={!hasFetched}
+            disabled={fetching || loading}
             label={'System is'}
             checked={isOn}
             alignIndicator={'right'}

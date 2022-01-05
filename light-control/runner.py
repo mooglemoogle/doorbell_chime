@@ -128,12 +128,13 @@ class Runner():
                 self.next_algorithm()
                 self.status.set_value('running', True)
             elif command == 'set_brightness':
-                brightness = message['brightness']
+                brightness = float(message['brightness'])
                 brightness = max(0.0, min(1.0, brightness))
                 self.status.set_value('brightness', brightness)
             elif command == 'set_cycle':
                 cycle = message['name']
                 self.status.set_value('current_cycle', cycle)
+                self.__change_cycle(cycle)
             elif command == 'get_status':
                 response = self.status.properties
             elif command == 'get_cycles':
