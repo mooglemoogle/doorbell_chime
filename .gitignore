@@ -1,8 +1,6 @@
 **/__pycache__/**
 **/node_modules
 
-web/server/dist
-
 light-control/status.json
 light-control/light_config.json
 
