@@ -1,22 +1,12 @@
+from typing import Dict
 import click
-import json
 import zmq
 
-def get_config_json():
-    with open('config.json', 'r') as json_config:
-        data = json.load(json_config)
-
-    return data
-
-def write_config_json(data):
-    with open('config.json', 'w') as f:
-        f.write(json.dumps(data, indent=4))
-
-def send_zmq_command(command:str):
+def send_zmq_command(command:str, options:Dict = {}):
     context = zmq.Context()
     socket = context.socket(zmq.REQ)
     socket.connect("tcp://localhost:5555")
-    socket.send_json({'command': command})
+    socket.send_json({'command': command, **options})
     message = socket.recv_json()
     if ('accepted' in message and message['accepted']):
         print(f"Complete")
@@ -38,9 +28,7 @@ def off():
 @cli.command()
 @click.argument('brightness', type=click.FloatRange(min=0.0, max=1.0), required=True)
 def brightness(brightness):
-    config = get_config_json()
-    config['brightness'] = brightness
-    write_config_json(config)
+    send_zmq_command('set_brightness', { 'brightness': brightness })
 
 @cli.command()
 def next():
