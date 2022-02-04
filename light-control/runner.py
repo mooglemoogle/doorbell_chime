@@ -167,5 +167,4 @@ class Runner():
         self.__last_cycle_time = this_cycle_time
     
     def destroy(self):
-        self.cycle.destroy()
         self.commandWatcher.destroy()

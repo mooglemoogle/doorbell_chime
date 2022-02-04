@@ -1,0 +1,59 @@
+{
+    "name": "Valentines",
+    "cycles": [
+        {
+            "algorithm": "two_color_wave",
+            "seconds_in_cycle": 600,
+            "options": {
+                "colors": [
+                    [0.989, 0.88, 0.92],
+                    [0.886, 0.29, 1.0]
+                ],
+                "wavelength": 50,
+                "reverse": false,
+                "split": false,
+                "speed": 4
+            }
+        },
+        {
+            "algorithm": "march",
+            "seconds_in_cycle": 600,
+            "options": {
+                "colors": [
+                    [0.989, 0.88, 0.92],
+                    [0.886, 0.29, 1.0],
+                    [0, 0.0, 0.8],
+                    [0.886, 0.29, 1.0]
+                ],
+                "freq": 2.0
+            }
+        },
+        {
+            "algorithm": "two_color_wave",
+            "seconds_in_cycle": 600,
+            "options": {
+                "colors": [
+                    [0.989, 0.88, 0.92],
+                    [0.886, 0.29, 1.0]
+                ],
+                "wavelength": 25,
+                "reverse": true,
+                "split": true,
+                "speed": 4
+            }
+        },
+        {
+            "algorithm": "pulse_switch",
+            "seconds_in_cycle": 600,
+            "options": {
+                "colors": [
+                    [0.989, 0.88, 0.92],
+                    [0, 0.0, 0.8]
+                ],
+                "onTime": 10,
+                "pulseTime": 2.0,
+                "lightsPerColor": 3
+            }
+        }
+    ]
+}

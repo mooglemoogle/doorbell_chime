@@ -2,8 +2,22 @@
     "name": "Default",
     "cycles": [
         {
+            "algorithm": "two_color_wave",
+            "seconds_in_cycle": 600,
+            "options": {
+                "colors": [
+                    [0.989, 0.88, 0.92],
+                    [0.886, 0.29, 1.0]
+                ],
+                "wavelength": 10,
+                "reverse": true,
+                "split": true,
+                "speed": 4
+            }
+        },
+        {
             "algorithm": "rainbow",
-            "seconds_in_cycle": 30,
+            "seconds_in_cycle": 120,
             "options": {
                 "speed": 100,
                 "reverse": false
@@ -11,7 +25,7 @@
         },
         {
             "algorithm": "split_rainbow",
-            "seconds_in_cycle": 30,
+            "seconds_in_cycle": 120,
             "options": {
                 "speed": 100,
                 "reverse": false
