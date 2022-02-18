@@ -1,0 +1,10 @@
+[Unit]
+Description=Brighten Lights at Dawn
+Requires=brighten-lights.service
+
+[Timer]
+Unit=brighten-lights.service
+OnCalendar=*-*-* 00:00
+
+[Install]
+WantedBy=timers.target

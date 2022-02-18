@@ -1,0 +1,21 @@
+{
+    "name": "Occasional Kitt",
+    "cycles": [
+        {
+            "algorithm": "kitt",
+            "seconds_in_cycle": 390,
+            "options": {
+                "color": [0, 1, 1],
+                "speed": 4,
+                "fade_time": 2,
+                "width": 4,
+                "border": 30
+            }
+        },
+        {
+            "algorithm": "off",
+            "seconds_in_cycle": 1980,
+            "options": {}
+        }
+    ]
+}

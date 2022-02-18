@@ -7,10 +7,16 @@ class Pixel:
     white = 0.0
 
     def __init__(self, hue=0, sat=0, val=0, white=0):
+        self.set(hue, sat, val, white)
+
+    def set(self, hue, sat, val, white=0):
         self.hue = hue
         self.sat = sat
         self.val = val
         self.white = white
+    
+    def clear(self):
+        self.set(0, 0, 0, 0)
 
     def multiply(self, value):
         return Pixel(self.hue, self.sat, self.val * value, self.white * value);

@@ -2,6 +2,17 @@
     "name": "Default",
     "cycles": [
         {
+            "algorithm": "kitt",
+            "seconds_in_cycle": 600,
+            "options": {
+                "color": [0, 1, 1],
+                "speed": 4,
+                "fade_time": 2,
+                "width": 4,
+                "border": 20
+            }
+        },
+        {
             "algorithm": "two_color_wave",
             "seconds_in_cycle": 600,
             "options": {

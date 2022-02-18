@@ -14,7 +14,7 @@ class Pulse:
     def apply_pulse(self, current_pixels: List[Pixel]) -> List[Pixel]:
         main_bound = self.size / 2.0
         left_bound = max(math.floor(self.location - main_bound - self.drop_off_left), 0);
-        right_bound = min(math.ceil(self.location + main_bound + self.drop_off_right), len(current_pixels));
+        right_bound = min(math.ceil(self.location + main_bound + self.drop_off_right), len(current_pixels) - 1);
         
         for n in range(left_bound, right_bound + 1):
             pixel = current_pixels[n]
@@ -23,14 +23,14 @@ class Pulse:
                     pixel.combine_with(self.color)
                 else:
                     distance = self.location - main_bound - n
-                    percentage = 1 - (distance / self.drop_off_left)
+                    percentage = max(1 - (distance / self.drop_off_left), 0)
                     pixel.combine_with(self.color.multiply(bezier_blend(percentage)))
             elif n > self.location:
                 if n <= self.location + main_bound:
                     pixel.combine_with(self.color)
                 else:
                     distance = n - self.location - main_bound
-                    percentage = 1 - (distance / self.drop_off_right)
+                    percentage = max(1 - (distance / self.drop_off_right), 0)
                     pixel.combine_with(self.color.multiply(bezier_blend(percentage)))
 
 

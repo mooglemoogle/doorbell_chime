@@ -1,0 +1,10 @@
+[Unit]
+Description=Dim Lights at Dusk
+Requires=dim-lights.service
+
+[Timer]
+Unit=dim-lights.service
+OnCalendar=*-*-* 12:00
+
+[Install]
+WantedBy=timers.target
