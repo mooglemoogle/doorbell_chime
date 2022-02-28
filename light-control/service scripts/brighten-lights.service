@@ -6,7 +6,8 @@ Wants=brighten-lights.timer
 User=root
 Type=oneshot
 WorkingDirectory=/home/pi/projects/doorbell_chime/light-control/
-ExecStart=/home/pi/projects/doorbell_chime/light-control/heliocron -l 39.001N -o 77.379W wait --event civil_dusk && /usr/local/bin/pipenv run lights brightness 70
+ExecStart=/home/pi/projects/doorbell_chime/light-control/heliocron -l 39.001N -o 77.379W wait --event civil_dawn
+ExecStart=/usr/local/bin/pipenv run lights brightness 70
 
 [Install]
 WantedBy=multi-user.target
