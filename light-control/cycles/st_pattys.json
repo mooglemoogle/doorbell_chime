@@ -6,7 +6,7 @@
             "seconds_in_cycle": 600,
             "options": {
                 "colors": [
-                    [0.411, 1.0, 0.7],
+                    [0.37, 1.0, 0.7],
                     [0, 0, 1.0],
                     [0.078, 1.0, 1.0],
                     [0, 0, 1.0]
@@ -18,7 +18,7 @@
             "algorithm": "single_color",
             "seconds_in_cycle": 600,
             "options": {
-                "color": [0.411, 1.0, 0.7]
+                "color": [0.37, 1.0, 0.7]
             }
         }
     ]
