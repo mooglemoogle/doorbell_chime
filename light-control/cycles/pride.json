@@ -4,6 +4,7 @@
         {
             "algorithm": "flag_wave",
             "seconds_in_cycle": 600,
+            "desc": "Rainbow Flag",
             "options": {
                 "flag_parts": [
                     {"color": [0, 1.0, 0.898], "parts": 1},
@@ -18,12 +19,13 @@
         {
             "algorithm": "flag_wave",
             "seconds_in_cycle": 600,
+            "desc": "Trans Flag",
             "options": {
                 "flag_parts": [
                     {"color": [0.547, 0.637, 0.984], "parts": 1},
-                    {"color": [0.997, 0.302, 0.961], "parts": 1},
+                    {"color": [0.997, 0.402, 0.961], "parts": 1},
                     {"color": [0, 0.0, 1.0], "parts": 1},
-                    {"color": [0.997, 0.302, 0.961], "parts": 1},
+                    {"color": [0.997, 0.402, 0.961], "parts": 1},
                     {"color": [0.547, 0.637, 0.984], "parts": 1}
                 ]
             }
@@ -39,6 +41,7 @@
         {
             "algorithm": "flag_wave",
             "seconds_in_cycle": 600,
+            "desc": "Bi Flag",
             "options": {
                 "flag_parts": [
                     {"color": [0.914, 0.991, 0.839], "parts": 1},
@@ -58,10 +61,11 @@
         {
             "algorithm": "flag_wave",
             "seconds_in_cycle": 600,
+            "desc": "Ace Flag",
             "options": {
                 "flag_parts": [
                     {"color": [0.0, 0.0, 0.0], "parts": 1},
-                    {"color": [0.0, 0.0, 0.643], "parts": 1},
+                    {"color": [0.0, 0.0, 0.443], "parts": 1},
                     {"color": [0, 0.0, 1.0], "parts": 1},
                     {"color": [0.833, 1.0, 0.506], "parts": 1}
                 ]
@@ -70,6 +74,7 @@
         {
             "algorithm": "pulse_switch",
             "seconds_in_cycle": 600,
+            "desc": "Ukraine Flag",
             "options": {
                 "colors": [
                     [0.586, 1.0, 0.9],
