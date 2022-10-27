@@ -1,0 +1,52 @@
+{
+    "name": "Halloween",
+    "cycles": [
+        {
+            "algorithm": "lightning",
+            "seconds_in_cycle": 600,
+            "options": {
+                "color": [0, 0, 1],
+                "max_bolts": 3,
+                "bolt_prob": 0.01,
+                "bump_prob": 0.01
+            }
+        },
+        {
+            "algorithm": "march",
+            "seconds_in_cycle": 600,
+            "options": {
+                "colors": [
+                    [0.789, 0.926, 0.8],
+                    [0, 0, 0],
+                    [0.067, 0.961, 1.0],
+                    [0, 0, 0]
+                ],
+                "freq": 0.5
+            }
+        },
+        {
+            "algorithm": "pulse_switch",
+            "seconds_in_cycle": 600,
+            "options": {
+                "colors": [
+                    [0.067, 0.961, 1.0],
+                    [0.152, 0.922, 1.0]
+                ],
+                "onTime": 0.5,
+                "pulseTime": 0.1,
+                "lightsPerColor": 4
+            }
+        },
+        {
+            "algorithm": "kitt",
+            "seconds_in_cycle": 390,
+            "options": {
+                "color": [0, 1, 1],
+                "speed": 3,
+                "fade_time": 2,
+                "width": 4,
+                "border": 30
+            }
+        }
+    ]
+}

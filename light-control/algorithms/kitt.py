@@ -86,5 +86,5 @@ config = {
             "border": 0
         }
     },
-    "refresh_rate": 60
+    "refresh_rate": 30
 }
