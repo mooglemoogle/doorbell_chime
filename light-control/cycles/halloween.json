@@ -25,16 +25,17 @@
             }
         },
         {
-            "algorithm": "pulse_switch",
+            "algorithm": "two_color_wave",
             "seconds_in_cycle": 600,
             "options": {
                 "colors": [
                     [0.067, 0.961, 1.0],
                     [0.152, 0.922, 1.0]
                 ],
-                "onTime": 0.5,
-                "pulseTime": 0.1,
-                "lightsPerColor": 4
+                "wavelength": 15,
+                "reverse": true,
+                "speed": 4,
+                "square": true
             }
         },
         {

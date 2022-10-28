@@ -10,9 +10,10 @@ class Algorithm(BaseAlgorithm):
         super().__init__(num_pixels, config, settings)
         self.reversed = 1 if settings['reverse'] else -1
         self.speed = settings['speed']
+        self.square = 'square' in settings and settings['square']
         
         multiplier = math.tau / settings['wavelength']
-        split = settings['split']
+        split = 'split' in settings and settings['split']
         if not split:
             self.locs = [n * multiplier for n in range(len(self.pixels))]
         else:
@@ -40,6 +41,10 @@ class Algorithm(BaseAlgorithm):
             pixel = self.pixels[n]
 
             pos = (math.cos(loc + phase) + 1) / 2
+            if self.square:
+                if pos > 0.5: pos = 1
+                else: pos = 0
+            
 
             hue = self.diff.hue * pos
             sat = self.diff.sat * pos

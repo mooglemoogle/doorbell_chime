@@ -42,12 +42,13 @@ class Algorithm(BaseAlgorithm):
     def run_cycle(self, elapsed_millis, elapsed_seconds):
         for pixel in self.pixels:
             pixel.clear()
+        
+        self.fade_bolts(elapsed_seconds)
+        self.clear_bolts()
+
         self.add_bolt()
 
         for bolt in self.bolts:
             bolt['pulse'].apply_pulse(self.pixels)
-
-        self.fade_bolts(elapsed_seconds)
-        self.clear_bolts()
 
         return super().run_cycle(elapsed_millis, elapsed_seconds)

@@ -43,10 +43,16 @@ config = {
                 "type": "boolean",
                 "default": False
             },
+            "square": {
+                "title": "Use Square Wave",
+                "type": "boolean",
+                "default": "false",
+            }
         },
         "default": {
             "speed": 100,
-            "reverse": True
+            "reverse": True,
+            "square": False,
         }
     },
     "refresh_rate": 60
