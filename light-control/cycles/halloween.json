@@ -45,7 +45,7 @@
                 "color": [0, 1, 1],
                 "speed": 3,
                 "fade_time": 2,
-                "width": 4,
+                "width": 10,
                 "border": 30
             }
         }
