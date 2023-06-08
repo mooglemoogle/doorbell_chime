@@ -2,44 +2,36 @@
     "name": "Default",
     "cycles": [
         {
-            "algorithm": "kitt",
+            "algorithm": "twinkles",
             "seconds_in_cycle": 600,
             "options": {
-                "color": [0, 1, 1],
-                "speed": 4,
-                "fade_time": 2,
-                "width": 4,
-                "border": 20
+                "density": 0.01,
+                "freq": 0.25,
+                "fadeTime": 2.0
             }
         },
         {
-            "algorithm": "two_color_wave",
+            "algorithm": "lightning",
+            "seconds_in_cycle": 600,
+            "options": {
+                "color": [0, 0, 1],
+                "max_bolts": 3,
+                "bolt_prob": 0.01,
+                "bump_prob": 0.01
+            }
+        },
+        {
+            "algorithm": "pulse_switch",
             "seconds_in_cycle": 600,
             "options": {
                 "colors": [
-                    [0.989, 0.88, 0.92],
-                    [0.886, 0.29, 1.0]
+                    [0, 0, 1],
+                    [0, 0, 0]
                 ],
-                "wavelength": 10,
-                "reverse": true,
-                "split": true,
-                "speed": 4
-            }
-        },
-        {
-            "algorithm": "rainbow",
-            "seconds_in_cycle": 120,
-            "options": {
-                "speed": 100,
-                "reverse": false
-            }
-        },
-        {
-            "algorithm": "split_rainbow",
-            "seconds_in_cycle": 120,
-            "options": {
-                "speed": 100,
-                "reverse": false
+                "onTime": 10,
+                "pulseTime": 2.0,
+                "lightsPerColor": 3,
+                "spaceBetween": 2
             }
         }
     ]

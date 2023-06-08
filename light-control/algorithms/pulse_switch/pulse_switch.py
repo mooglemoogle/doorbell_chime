@@ -17,10 +17,16 @@ class Algorithm(BaseAlgorithm):
         pulse_time = settings['pulseTime']
         self.half_pulse = pulse_time / 2.0
         self.lights_per_color = settings['lightsPerColor']
+        self.space_between = settings['spaceBetween']
 
         self.set_colors()
 
     def set_color(self, pixel, index):
+        if index == -1:
+            pixel.hue = 0
+            pixel.sat = 0
+            pixel.val = 0
+            return
         color = self.colors[index]
         pixel.hue = color[0]
         pixel.sat = color[1]
@@ -35,9 +41,12 @@ class Algorithm(BaseAlgorithm):
         for n in range(len(self.pixels)):
             pixel = self.pixels[n]
 
-            self.set_color(pixel, color_index)
+            if light_num < self.lights_per_color:
+                self.set_color(pixel, color_index)
+            else:
+                self.set_color(pixel, -1)
             light_num +=1
-            if light_num >= self.lights_per_color:
+            if light_num >= self.lights_per_color + self.space_between:
                 light_num = 0
                 color_index += 1
                 if color_index >= 2:

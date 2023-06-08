@@ -37,17 +37,6 @@
                 "speed": 4,
                 "square": true
             }
-        },
-        {
-            "algorithm": "kitt",
-            "seconds_in_cycle": 390,
-            "options": {
-                "color": [0, 1, 1],
-                "speed": 3,
-                "fade_time": 2,
-                "width": 10,
-                "border": 30
-            }
         }
     ]
 }

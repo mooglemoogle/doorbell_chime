@@ -40,6 +40,12 @@ config = {
                 "type": "integer",
                 "default": 1,
                 "minimum": 1
+            },
+            "spaceBetween": {
+                "title": "Number of blank spaces between colors",
+                "type": "integer",
+                "default": 0,
+                "minimum": 0
             }
         },
         "default": {
@@ -49,7 +55,8 @@ config = {
             ],
             "onTime": 5,
             "pulseTime": 0.5,
-            "lightsPerColor": 1
+            "lightsPerColor": 1,
+            "spaceBetween": 0
         }
     },
     "refresh_rate": 60
