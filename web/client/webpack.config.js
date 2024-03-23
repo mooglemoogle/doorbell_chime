@@ -1,5 +1,6 @@
 const { resolve } = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 
 module.exports = {
     mode: 'production',
@@ -11,6 +12,14 @@ module.exports = {
     },
     resolve: {
         extensions: ['.js', '.jsx', '.ts', '.tsx'],
+        alias: {
+            '@app': resolve(__dirname, './src'),
+            '@components': resolve(__dirname, './src/components'),
+            '@utils': resolve(__dirname, './src/utils'),
+            '@types': resolve(__dirname, './src/types'),
+            '@services': resolve(__dirname, './src/services'),
+            '@atoms': resolve(__dirname, './src/atoms'),
+        },
     },
     context: resolve(__dirname, './src'),
     module: {
@@ -33,11 +42,7 @@ module.exports = {
             },
         ],
     },
-    plugins: [new HtmlWebpackPlugin({ template: 'index.html.ejs' })],
-    externals: {
-        react: 'React',
-        'react-dom': 'ReactDOM',
-    },
+    plugins: [new CleanWebpackPlugin(), new HtmlWebpackPlugin({ template: 'index.html.ejs' })],
     performance: {
         hints: false,
     },

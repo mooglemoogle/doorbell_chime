@@ -1,5 +1,3 @@
-/** @jsx jsx */
-import { jsx } from '@emotion/react';
 import { FC, useCallback, useState } from 'react';
 import { Button, Intent } from '@blueprintjs/core';
 

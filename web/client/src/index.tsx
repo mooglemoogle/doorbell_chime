@@ -1,10 +1,12 @@
-import * as React from 'react';
-import { render } from 'react-dom';
+import { createRoot } from 'react-dom/client';
 
 import '@blueprintjs/core/lib/css/blueprint.css';
 
-import { App } from './components/App';
+import { App } from './App';
 
 const rootEl = document.getElementById('root');
-
-render(<App />, rootEl);
+if (!rootEl) {
+    throw new Error('No root element found');
+}
+const root = createRoot(rootEl);
+root.render(<App />);

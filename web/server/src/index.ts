@@ -6,7 +6,7 @@ import { resolve } from 'path';
 
 config();
 
-import routes from '@app/routes/index';
+import routes from './routes/index';
 
 const app = express();
 
