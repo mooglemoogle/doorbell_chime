@@ -1,18 +1,22 @@
-import { FC, PropsWithChildren } from 'react';
+import { FC } from 'react';
 import { IconName, Icon } from '@blueprintjs/core';
 import { useTheme } from '@emotion/react';
+import { NavLink, NavLinkProps } from 'react-router-dom';
 
-interface ButtonProps extends PropsWithChildren {
+interface ButtonProps extends NavLinkProps {
     icon: IconName;
-    onClick?: () => void;
     className?: string;
 }
 
-const SidebarButton: FC<ButtonProps> = ({ children, ...props }) => {
+const SidebarButton: FC<ButtonProps> = ({ children, className, ...props }) => {
     const theme = useTheme();
     return (
-        <button
+        <NavLink
             {...props}
+            className={({ isActive }) => {
+                const newClass = className || '';
+                return `${newClass} ${isActive ? 'active' : ''}`;
+            }}
             css={{
                 display: 'flex',
                 justifyContent: 'center',
@@ -26,9 +30,11 @@ const SidebarButton: FC<ButtonProps> = ({ children, ...props }) => {
                 outlineOffset: '-2px',
                 '&:hover': {
                     backgroundColor: theme.components.sidebar.button.hover.backgroundColor,
+                    color: theme.components.sidebar.button.color,
                 },
-                '&:active': {
+                '&:active, &.active': {
                     backgroundColor: theme.components.sidebar.button.active.backgroundColor,
+                    color: theme.components.sidebar.button.color,
                 },
             }}
         >
@@ -39,8 +45,7 @@ const SidebarButton: FC<ButtonProps> = ({ children, ...props }) => {
                 size={25}
                 icon={props.icon}
             />
-            {children}
-        </button>
+        </NavLink>
     );
 };
 
@@ -61,7 +66,7 @@ export const Sidebar: FC<SidebarProps> = ({ className }) => {
                 backgroundColor: theme.components.sidebar.backgroundColor,
             }}
         >
-            <SidebarButton icon="home" />
+            <SidebarButton icon="home" to="/" />
         </div>
     );
 };
