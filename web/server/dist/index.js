@@ -1,7 +1,11 @@
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
 }) : (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
@@ -27,15 +31,15 @@ const cors_1 = __importDefault(require("cors"));
 const http_status_codes_1 = require("http-status-codes");
 const dotenv_1 = require("dotenv");
 const path_1 = require("path");
-dotenv_1.config();
+(0, dotenv_1.config)();
 const index_1 = __importDefault(require("./routes/index"));
-const app = express_1.default();
-app.use(express_1.json(), cors_1.default({
+const app = (0, express_1.default)();
+app.use((0, express_1.json)(), (0, cors_1.default)({
     origin: process.env.CLIENT_URL,
     optionsSuccessStatus: http_status_codes_1.StatusCodes.OK,
 }));
-app.use(index_1.default());
-app.use(express_1.default.static(path_1.resolve(__dirname, '../../client/dist')));
+app.use((0, index_1.default)());
+app.use(express_1.default.static((0, path_1.resolve)(__dirname, '../../client/dist')));
 app.use('*', (req, res) => {
     res.status(http_status_codes_1.StatusCodes.NOT_FOUND).send('404 Not Found');
 });

@@ -16,7 +16,7 @@ const isCommandResponse = (response) => {
     return response.accepted !== undefined;
 };
 let sendLock = Promise.resolve('');
-const sendCommand = (command, options = {}) => __awaiter(void 0, void 0, void 0, function* () {
+const sendCommand = (command_1, ...args_1) => __awaiter(void 0, [command_1, ...args_1], void 0, function* (command, options = {}) {
     const message = Object.assign({ command }, options);
     sendLock = sendLock.then(() => __awaiter(void 0, void 0, void 0, function* () {
         yield sock.send(JSON.stringify(message));

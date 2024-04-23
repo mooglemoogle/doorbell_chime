@@ -6,7 +6,7 @@
     "license": "MIT",
     "scripts": {
         "start": "yarn build:live",
-        "build": "ttsc -p .",
+        "build": "tsc -p .",
         "build:live": "nodemon --watch './**/*.ts' --exec \"ts-node\" ./src/index.ts"
     },
     "devDependencies": {

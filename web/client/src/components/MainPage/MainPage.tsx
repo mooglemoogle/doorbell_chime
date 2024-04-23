@@ -1,12 +1,21 @@
 import React, { FC } from 'react';
 import { useOutlet } from 'react-router-dom';
-
-import { Sidebar } from './Sidebar';
 import { useTheme } from '@emotion/react';
+
+import { Sidebar } from './Menu/Sidebar';
+import { MainMenuItem } from '@app/types/UI';
 
 export const MainPage: FC = () => {
     const outlet = useOutlet();
     const theme = useTheme();
+
+    const mainMenuItems: MainMenuItem[] = [
+        {
+            name: 'Home',
+            location: '/',
+            icon: 'home',
+        },
+    ];
 
     return (
         <div
@@ -21,7 +30,7 @@ export const MainPage: FC = () => {
                 backgroundColor: theme.colors.background,
             }}
         >
-            <Sidebar css={{ gridArea: 'sidebar' }} />
+            <Sidebar css={{ gridArea: 'sidebar' }} menuItems={mainMenuItems} />
             <div
                 css={{
                     gridArea: 'mainArea',
