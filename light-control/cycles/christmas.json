@@ -33,7 +33,8 @@
                 ],
                 "onTime": 5,
                 "pulseTime": 0.5,
-                "lightsPerColor": 2
+                "lightsPerColor": 4,
+                "spaceBetween": 1
             }
         }
     ]
