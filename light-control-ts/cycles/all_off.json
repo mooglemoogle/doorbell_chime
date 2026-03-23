@@ -1,0 +1,10 @@
+{
+    "name": "All Off",
+    "cycles": [
+        {
+            "algorithm": "blank",
+            "seconds_in_cycle": 120,
+            "options": {}
+        }
+    ]
+}

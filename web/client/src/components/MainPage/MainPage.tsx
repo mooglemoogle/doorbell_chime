@@ -3,7 +3,7 @@ import { useOutlet } from 'react-router-dom';
 import { useTheme } from '@emotion/react';
 
 import { Sidebar } from './Menu/Sidebar';
-import { MainMenuItem } from '@app/types/UI';
+import { MainMenuItem } from '@app/types/ui';
 
 export const MainPage: FC = () => {
     const outlet = useOutlet();

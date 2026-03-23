@@ -8,6 +8,7 @@ def send_zmq_command(command:str, options:Dict = {}):
     socket.connect("tcp://localhost:5555")
     socket.send_json({'command': command, **options})
     message = socket.recv_json()
+    print(message)
     if ('accepted' in message and message['accepted']):
         print(f"Complete")
     else:
@@ -19,6 +20,7 @@ def cli():
 
 @cli.command()
 def on():
+    print('Doing ON')
     send_zmq_command('on')
 
 @cli.command()

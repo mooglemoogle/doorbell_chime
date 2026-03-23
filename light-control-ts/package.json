@@ -1,0 +1,19 @@
+{
+    "name": "light-control-ts",
+    "version": "1.0.0",
+    "type": "module",
+    "scripts": {
+        "start": "tsx index.ts",
+        "dev": "MODE=DEVELOPMENT MOCK_PIIXEL=1 tsx index.ts"
+    },
+    "dependencies": {
+        "dotenv": "^16.4.5",
+        "piixel": "^1.2.2",
+        "zeromq": "^6.0.0-beta.19"
+    },
+    "devDependencies": {
+        "@types/node": "^22.0.0",
+        "tsx": "^4.19.2",
+        "typescript": "^5.7.3"
+    }
+}

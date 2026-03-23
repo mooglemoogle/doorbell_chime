@@ -1,0 +1,38 @@
+{
+    "name": "Default",
+    "cycles": [
+        {
+            "algorithm": "twinkles",
+            "seconds_in_cycle": 600,
+            "options": {
+                "density": 0.01,
+                "freq": 0.25,
+                "fadeTime": 2.0
+            }
+        },
+        {
+            "algorithm": "lightning",
+            "seconds_in_cycle": 600,
+            "options": {
+                "color": [0, 0, 1],
+                "max_bolts": 3,
+                "bolt_prob": 0.01,
+                "bump_prob": 0.01
+            }
+        },
+        {
+            "algorithm": "pulse_switch",
+            "seconds_in_cycle": 600,
+            "options": {
+                "colors": [
+                    [0.5, 1, 1],
+                    [0, 0, 0]
+                ],
+                "onTime": 10,
+                "pulseTime": 2.0,
+                "lightsPerColor": 3,
+                "spaceBetween": 2
+            }
+        }
+    ]
+}

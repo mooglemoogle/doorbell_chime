@@ -2,7 +2,7 @@ import { FC } from 'react';
 import { IconName, Icon } from '@blueprintjs/core';
 import { useTheme } from '@emotion/react';
 import { NavLink, NavLinkProps } from 'react-router-dom';
-import { MainMenuItem } from '@app/types/UI';
+import { MainMenuItem } from '@app/types/ui';
 
 interface ButtonProps extends NavLinkProps {
     icon: IconName;
