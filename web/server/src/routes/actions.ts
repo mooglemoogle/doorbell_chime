@@ -1,96 +1,43 @@
 import { Router } from 'express';
-import { Request } from 'zeromq';
+import { AnimationRunner } from '../animation/runner';
 
-const sock = new Request();
-sock.connect('tcp://localhost:5555');
+const SIMPLE_COMMANDS = ['on', 'off', 'next'] as const;
+type SimpleCommand = typeof SIMPLE_COMMANDS[number];
 
-type CommandResponse = {
-    accepted: boolean;
-};
-
-const isCommandResponse = (response: string | CommandResponse): response is CommandResponse => {
-    return (response as CommandResponse).accepted !== undefined;
-};
-
-let sendLock: Promise<CommandResponse | string> = Promise.resolve('');
-
-const sendCommand = async (command: string, options = {}) => {
-    const message = { command, ...options };
-    sendLock = sendLock.then(async () => {
-        await sock.send(JSON.stringify(message));
-        const [result] = await sock.receive();
-        try {
-            const resultObj = JSON.parse(result.toString('utf-8'));
-            return resultObj as CommandResponse;
-        } catch {
-            return result.toString('utf-8');
-        }
+export default (router: Router, getRunner: () => AnimationRunner) => {
+    router.get('/api/actions/get_status', (_req, res) => {
+        res.status(200).json({ accepted: true, response: getRunner().getStatus() });
     });
-    return sendLock;
-};
 
-const VALID_COMMANDS = ['on', 'off', 'next'];
-
-export default (router: Router) => {
-    router.get('/api/actions/get_status', async (req, res) => {
-        const result = await sendCommand('get_status');
-
-        if (isCommandResponse(result) && result.accepted) {
-            res.status(200);
-            res.send(result);
-        } else {
-            res.status(400);
-            res.send(result);
-        }
+    router.get('/api/actions/get_cycles', (_req, res) => {
+        res.status(200).json({ accepted: true, response: getRunner().getCycleNames() });
     });
-    router.get('/api/actions/get_cycles', async (req, res) => {
-        const result = await sendCommand('get_cycles');
 
-        if (isCommandResponse(result) && result.accepted) {
-            res.status(200);
-            res.send(result);
-        } else {
-            res.status(400);
-            res.send(result);
+    router.post('/api/actions/set_brightness/:new_brightness', (req, res) => {
+        const value = parseFloat(req.params.new_brightness);
+        if (isNaN(value)) {
+            res.status(400).json({ accepted: false, message: 'brightness must be a number' });
+            return;
         }
+        getRunner().setBrightness(value);
+        res.status(202).json({ accepted: true });
     });
-    router.post('/api/actions/set_brightness/:new_brightness', async (req, res) => {
-        const result = await sendCommand('set_brightness', { brightness: req.params.new_brightness });
 
-        if (isCommandResponse(result) && result.accepted) {
-            res.status(202);
-            res.send(result);
-        } else {
-            res.status(400);
-            res.send(result);
-        }
+    router.post('/api/actions/set_cycle/:new_cycle', (req, res) => {
+        getRunner().setCycle(req.params.new_cycle);
+        res.status(202).json({ accepted: true });
     });
-    router.post('/api/actions/set_cycle/:new_cycle', async (req, res) => {
-        const result = await sendCommand('set_cycle', { name: req.params.new_cycle });
 
-        if (isCommandResponse(result) && result.accepted) {
-            res.status(202);
-            res.send(result);
-        } else {
-            res.status(400);
-            res.send(result);
+    router.post('/api/actions/:command', (req, res) => {
+        const command = req.params.command.toLowerCase() as SimpleCommand;
+        if (!SIMPLE_COMMANDS.includes(command)) {
+            res.status(404).send('Command not found');
+            return;
         }
-    });
-    router.post('/api/actions/:command', async (req, res) => {
-        const command = req.params.command.toLowerCase();
-        if (VALID_COMMANDS.includes(command)) {
-            const result = await sendCommand(command);
-
-            if (isCommandResponse(result) && result.accepted) {
-                res.status(202);
-                res.send(result);
-            } else {
-                res.status(400);
-                res.send(result);
-            }
-        } else {
-            res.status(404);
-            res.send('Command not found');
-        }
+        const runner = getRunner();
+        if (command === 'on') runner.turnOn();
+        else if (command === 'off') runner.turnOffCommand();
+        else if (command === 'next') runner.nextAlgorithm();
+        res.status(202).json({ accepted: true });
     });
 };

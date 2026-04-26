@@ -1,61 +1,59 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"strconv"
 
-	"github.com/go-zeromq/zmq4"
 	"github.com/spf13/cobra"
 )
 
-const zmqAddr = "tcp://localhost:5555"
+var serverURL string
 
-func sendCommand(command string, extra map[string]any) {
-	sock := zmq4.NewReq(context.Background())
-	defer sock.Close()
-
-	if err := sock.Dial(zmqAddr); err != nil {
-		fmt.Fprintf(os.Stderr, "Error connecting to light controller: %v\n", err)
-		os.Exit(1)
-	}
-
-	payload := map[string]any{"command": command}
-	for k, v := range extra {
-		payload[k] = v
-	}
-
-	data, _ := json.Marshal(payload)
-	if err := sock.Send(zmq4.NewMsg(data)); err != nil {
-		fmt.Fprintf(os.Stderr, "Error sending command: %v\n", err)
-		os.Exit(1)
-	}
-
-	msg, err := sock.Recv()
+// get performs a GET to the given API path and prints the response.
+func get(path string) {
+	resp, err := http.Get(serverURL + path)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error receiving response: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error connecting to server: %v\n", err)
 		os.Exit(1)
 	}
+	handleResponse(resp)
+}
 
-	var response map[string]any
-	if err := json.Unmarshal(msg.Frames[0], &response); err != nil {
+// post performs a POST (no body) to the given API path and prints the response.
+func post(path string) {
+	resp, err := http.Post(serverURL+path, "application/json", nil)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error connecting to server: %v\n", err)
+		os.Exit(1)
+	}
+	handleResponse(resp)
+}
+
+func handleResponse(resp *http.Response) {
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+
+	var result map[string]any
+	if err := json.Unmarshal(body, &result); err != nil {
 		fmt.Fprintf(os.Stderr, "Error parsing response: %v\n", err)
 		os.Exit(1)
 	}
 
-	accepted, _ := response["accepted"].(bool)
+	accepted, _ := result["accepted"].(bool)
 	if accepted {
-		if resp, ok := response["response"]; ok && resp != nil {
-			pretty, _ := json.MarshalIndent(resp, "", "  ")
+		if response, ok := result["response"]; ok && response != nil {
+			pretty, _ := json.MarshalIndent(response, "", "  ")
 			fmt.Println(string(pretty))
 		}
 		fmt.Println("Complete")
 	} else {
-		msg, _ := response["message"].(string)
+		msg, _ := result["message"].(string)
 		if msg == "" {
-			msg = "Unknown Error"
+			msg = "Unknown error"
 		}
 		fmt.Fprintf(os.Stderr, "There was a problem: %s\n", msg)
 		os.Exit(1)
@@ -64,32 +62,25 @@ func sendCommand(command string, extra map[string]any) {
 
 var rootCmd = &cobra.Command{
 	Use:   "lights",
-	Short: "Control the LED light strip",
+	Short: "Control the LED light strips",
 }
 
 var onCmd = &cobra.Command{
 	Use:   "on",
 	Short: "Turn the lights on",
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Doing ON")
-		sendCommand("on", nil)
-	},
+	Run:   func(cmd *cobra.Command, args []string) { post("/api/actions/on") },
 }
 
 var offCmd = &cobra.Command{
 	Use:   "off",
 	Short: "Turn the lights off",
-	Run: func(cmd *cobra.Command, args []string) {
-		sendCommand("off", nil)
-	},
+	Run:   func(cmd *cobra.Command, args []string) { post("/api/actions/off") },
 }
 
 var nextCmd = &cobra.Command{
 	Use:   "next",
 	Short: "Advance to the next algorithm in the cycle",
-	Run: func(cmd *cobra.Command, args []string) {
-		sendCommand("next", nil)
-	},
+	Run:   func(cmd *cobra.Command, args []string) { post("/api/actions/next") },
 }
 
 var brightnessCmd = &cobra.Command{
@@ -102,37 +93,38 @@ var brightnessCmd = &cobra.Command{
 			fmt.Fprintln(os.Stderr, "brightness must be a number between 0.0 and 1.0")
 			os.Exit(1)
 		}
-		sendCommand("set_brightness", map[string]any{"brightness": val})
+		post("/api/actions/set_brightness/" + args[0])
 	},
 }
 
 var statusCmd = &cobra.Command{
 	Use:   "status",
-	Short: "Get current light controller status",
-	Run: func(cmd *cobra.Command, args []string) {
-		sendCommand("get_status", nil)
-	},
+	Short: "Get current status",
+	Run:   func(cmd *cobra.Command, args []string) { get("/api/actions/get_status") },
 }
 
 var cyclesCmd = &cobra.Command{
 	Use:   "cycles",
 	Short: "List available cycles",
-	Run: func(cmd *cobra.Command, args []string) {
-		sendCommand("get_cycles", nil)
-	},
+	Run:   func(cmd *cobra.Command, args []string) { get("/api/actions/get_cycles") },
 }
 
 var setCycleCmd = &cobra.Command{
 	Use:   "set-cycle <name>",
 	Short: "Switch to a named cycle",
 	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		sendCommand("set_cycle", map[string]any{"name": args[0]})
-	},
+	Run:   func(cmd *cobra.Command, args []string) { post("/api/actions/set_cycle/" + args[0]) },
+}
+
+var stripsCmd = &cobra.Command{
+	Use:   "strips",
+	Short: "List connected light strips",
+	Run:   func(cmd *cobra.Command, args []string) { get("/api/strips") },
 }
 
 func init() {
-	rootCmd.AddCommand(onCmd, offCmd, nextCmd, brightnessCmd, statusCmd, cyclesCmd, setCycleCmd)
+	rootCmd.PersistentFlags().StringVar(&serverURL, "server", "http://localhost:3000", "Home server URL")
+	rootCmd.AddCommand(onCmd, offCmd, nextCmd, brightnessCmd, statusCmd, cyclesCmd, setCycleCmd, stripsCmd)
 }
 
 func main() {
