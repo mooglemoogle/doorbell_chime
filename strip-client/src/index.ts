@@ -28,11 +28,20 @@ process.on('SIGINT', () => {
 
 client.connect()
 
-// Frame application loop: poll at the current fps, apply buffered frames on time
+// Frame application loop: deadline-based timing so work time doesn't accumulate
+let nextFrame = Date.now()
+
 function applyLoop(): void {
   const frame = buffer.getFrame(Date.now())
   if (frame) strip.applyFrame(frame)
-  setTimeout(applyLoop, 1000 / buffer.fps)
+  nextFrame += 1000 / buffer.fps
+  const delay = nextFrame - Date.now()
+  if (delay > 0) {
+    setTimeout(applyLoop, delay)
+  } else {
+    nextFrame = Date.now()
+    setTimeout(applyLoop, 0)
+  }
 }
 
 applyLoop()

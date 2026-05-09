@@ -6,6 +6,7 @@ import { resolve } from 'path';
 
 config();
 
+import logger from './logger';
 import routes from './routes/index';
 import { StripRegistry } from './strips/registry';
 import { StripManager } from './strips/manager';
@@ -14,10 +15,6 @@ import { AnimationRunner } from './animation/runner';
 import { Status } from './status';
 import { Cycles } from './cycles';
 import { createStripWebSocketServer } from './websocket/server';
-
-console.log(process.env.CYCLES_DIR);
-console.log(resolve(__dirname, '../../data/cycles'));
-console.log(__dirname);
 
 // Build the dependency graph
 const status = new Status();
@@ -30,17 +27,17 @@ let runner = new AnimationRunner(status, cycles, registry, frameGenerator);
 
 function startRunner(): void {
     if (registry.totalPixels === 0) {
-        console.log('No strips registered yet — animation runner standing by');
+        logger.info('No strips registered yet — animation runner standing by');
         return;
     }
     runner.start().catch(err => {
-        console.error('Animation runner error:', err);
+        logger.error('Animation runner error', { error: String(err) });
         process.exit(1);
     });
 }
 
 function restartRunner(): void {
-    console.log('Strip layout changed — restarting animation runner');
+    logger.info('Strip layout changed — restarting animation runner');
     runner.stop();
     runner = new AnimationRunner(status, cycles, registry, frameGenerator);
     startRunner();
@@ -71,5 +68,5 @@ app.use('*', (_req, res) => {
 });
 
 app.listen(process.env.APP_PORT, () => {
-    console.log(`Light Control listening on port ${process.env.APP_PORT}`);
+    logger.info('Light Control server started', { port: process.env.APP_PORT });
 });

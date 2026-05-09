@@ -123,7 +123,7 @@ var stripsCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVar(&serverURL, "server", "http://localhost:3000", "Home server URL")
+	rootCmd.PersistentFlags().StringVar(&serverURL, "server", "http://localhost:8080", "Home server URL")
 	rootCmd.AddCommand(onCmd, offCmd, nextCmd, brightnessCmd, statusCmd, cyclesCmd, setCycleCmd, stripsCmd)
 }
 

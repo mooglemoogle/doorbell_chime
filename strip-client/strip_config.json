@@ -6,7 +6,7 @@
     },
     "hardware": {
         "index_start": 0,
-        "index_end": 89,
+        "index_end": 15,
         "gpio_pin": 18,
         "bpp": 3,
         "order": "GRB",

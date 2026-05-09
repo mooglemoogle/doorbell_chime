@@ -7,3 +7,4 @@ light-control/light_config.json
 
 **/.env
 **/*.log*
+strip-client-rust/target

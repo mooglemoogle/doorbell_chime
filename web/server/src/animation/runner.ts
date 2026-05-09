@@ -1,5 +1,6 @@
 import { Status } from '../status'
 import { Cycles } from '../cycles'
+import logger from '../logger'
 import { Cycle } from '../cycle'
 import { Timer } from '../timer'
 import { algorithms } from '../algorithms/index'
@@ -56,7 +57,7 @@ export class AnimationRunner {
     this.timer = new Timer(this.curAlg.refreshRate())
     this.refreshAlgorithms()
 
-    console.log(`Animation runner ready. Virtual canvas: ${numPx}px across ${this.registry.strips.length} strip(s)`)
+    logger.info('Animation runner ready', { totalPixels: numPx, strips: this.registry.strips.length })
   }
 
   fps(): number {
@@ -82,6 +83,13 @@ export class AnimationRunner {
     const mod = algorithms[entry.algorithm]
     if (!mod) throw new Error(`Unknown algorithm: ${entry.algorithm}`)
 
+    logger.info('Algorithm queued', {
+      algorithm: entry.algorithm,
+      cycleIndex: this.cycleIndex,
+      durationSecs: entry.seconds_in_cycle,
+      cycle: this.currentCycle.name,
+    })
+
     this.nextAlg = new mod.Algorithm(this.registry.totalPixels, entry.options)
     this.startTransition()
     this.timer.updateFps(this.transitionAlg.refreshRate())
@@ -90,6 +98,7 @@ export class AnimationRunner {
   }
 
   turnOff(): void {
+    logger.info('Lights off')
     this.cycleIndex = -1
     this.nextAlg = this.offAlg
     this.offAlg.setHueSat(this.curAlg.pixels)
@@ -116,6 +125,7 @@ export class AnimationRunner {
   }
 
   setCycle(name: string): void {
+    logger.info('Cycle changed', { cycle: name })
     this.cycleIndex = -1
     this.currentCycle = this.cycles.getCycle(name)
     this.status.setValue('current_cycle', name)
@@ -126,6 +136,7 @@ export class AnimationRunner {
 
   turnOn(): void {
     if (this.isOff()) {
+      logger.info('Lights on')
       this.nextAlgorithm()
       this.status.setValue('running', true)
     }

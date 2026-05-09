@@ -1,0 +1,8 @@
+# WebSocket client
+websocket-client>=1.6.0
+
+# LED hardware (Raspberry Pi only — not needed with MOCK_NEOPIXEL=1)
+# Uncomment on the Pi:
+# rpi_ws281x>=4.3.0
+# adafruit-blinka>=8.0.0
+# adafruit-circuitpython-neopixel>=6.0.0

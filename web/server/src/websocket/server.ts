@@ -1,6 +1,7 @@
 import { WebSocketServer, WebSocket } from 'ws'
 import { StripRegistry, StripRegistryEntry } from '../strips/registry'
 import { StripManager } from '../strips/manager'
+import logger from '../logger'
 
 interface RegisterMessage {
   type: 'register'
@@ -25,11 +26,12 @@ export function createStripWebSocketServer(
   const wss = new WebSocketServer({ port })
 
   wss.on('listening', () => {
-    console.log(`Strip WebSocket server listening on port ${port}`)
+    logger.info('Strip WebSocket server listening', { port })
   })
 
   wss.on('connection', (socket: WebSocket) => {
     let registeredId: string | null = null
+    logger.info('Strip client connected (awaiting registration)')
 
     socket.on('message', (data) => {
       if (typeof data === 'string' || Buffer.isBuffer(data)) {
@@ -38,14 +40,14 @@ export function createStripWebSocketServer(
         try {
           msg = JSON.parse(text) as StripMessage
         } catch {
-          console.warn('Strip sent invalid JSON:', text)
+          logger.warn('Strip sent invalid JSON', { data: text })
           return
         }
 
         if (msg.type === 'register') {
           const { stripId, config } = msg
           if (!config || !stripId) {
-            console.warn('Strip register message missing stripId or config')
+            logger.warn('Strip register message missing stripId or config')
             socket.close()
             return
           }
@@ -55,6 +57,13 @@ export function createStripWebSocketServer(
           registeredId = stripId
           manager.register(stripId, socket, meta)
 
+          logger.info('Strip registered', {
+            stripId,
+            numPixels: config.numPixels,
+            bpp: config.bpp,
+            layoutChanged,
+          })
+
           if (layoutChanged) onLayoutChange()
         } else if (msg.type === 'status' && registeredId) {
           manager.updateStatus(registeredId, msg.bufferedFrames)
@@ -63,11 +72,14 @@ export function createStripWebSocketServer(
     })
 
     socket.on('close', () => {
-      if (registeredId) manager.remove(registeredId)
+      if (registeredId) {
+        logger.info('Strip disconnected', { stripId: registeredId })
+        manager.remove(registeredId)
+      }
     })
 
     socket.on('error', (err) => {
-      console.error(`Strip socket error (${registeredId ?? 'unregistered'}):`, err.message)
+      logger.error('Strip socket error', { stripId: registeredId ?? 'unregistered', error: err.message })
     })
   })
 
