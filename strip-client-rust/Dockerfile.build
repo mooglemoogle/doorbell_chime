@@ -1,0 +1,14 @@
+FROM rust:latest
+
+# Build dependencies (including clang/libclang for bindgen in rs_ws281x)
+RUN apt-get update && \
+    apt-get install -y cmake git clang libclang-dev pkg-config && \
+    rm -rf /var/lib/apt/lists/*
+
+# Build rpi_ws281x C library from source and install it
+RUN git clone --depth 1 https://github.com/jgarff/rpi_ws281x.git /tmp/rpi_ws281x && \
+    cmake -S /tmp/rpi_ws281x -B /tmp/rpi_ws281x/build \
+    -DBUILD_SHARED=OFF -DBUILD_SHARED_LIBS=OFF && \
+    cmake --build /tmp/rpi_ws281x/build && \
+    cmake --install /tmp/rpi_ws281x/build && \
+    rm -rf /tmp/rpi_ws281x

@@ -6,8 +6,10 @@ buffers incoming timestamped frames, and drives the LED strip via SPI.
 
 Environment variables:
   MOCK_WS2818=1      Print colored terminal blocks instead of driving hardware
-  SPI_DEVICE=path    SPI device path (default: /dev/spidev0.0)
   STRIP_CONFIG=path  Path to strip_config.json (default: ./strip_config.json)
+
+Build flags:
+  --features hardware   Enable WS281x hardware output (requires rpi_ws281x C library)
 */
 
 use std::collections::BTreeMap;
@@ -22,7 +24,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use tungstenite::stream::MaybeTlsStream;
+// use tungstenite::stream::MaybeTlsStream;
 use tungstenite::Message;
 
 // ---------------------------------------------------------------------------
@@ -150,38 +152,52 @@ fn term_color(r: u8, g: u8, b: u8) -> String {
     format!("\x1b[48;2;{r};{g};{b}m  \x1b[0m")
 }
 
-/// Reorder (r,g,b) into the wire order the LED strip expects.
-fn reorder(order: &str, r: u8, g: u8, b: u8) -> (u8, u8, u8) {
-    match order {
-        "GRB" => (g, r, b),
-        "BGR" => (b, g, r),
-        "BRG" => (b, r, g),
-        "RBG" => (r, b, g),
-        "GBR" => (g, b, r),
-        _ => (r, g, b),
-    }
-}
-
 // ---------------------------------------------------------------------------
-// Apply loop (runs in its own thread, owns the SPI adapter)
+// Apply loop (runs in its own thread, owns the WS281x controller)
 // ---------------------------------------------------------------------------
 
-fn run_apply_loop(hw: HardwareConfig, buffer: Arc<Mutex<FrameBuffer>>, mock: bool, spi_device: String) {
-    use ws2818_rgb_led_spi_driver::adapter_gen::WS28xxAdapter;
-    use ws2818_rgb_led_spi_driver::adapter_spi::WS28xxSpiAdapter;
-
+fn run_apply_loop(hw: HardwareConfig, buffer: Arc<Mutex<FrameBuffer>>, mock: bool) {
     let num_pixels = (hw.index_end - hw.index_start).unsigned_abs() as usize + 1;
     let skip: HashSet<i32> = hw.skip.iter().copied().collect();
     let reversed = hw.index_end < hw.index_start;
     let bpp = hw.bpp as usize;
 
-    let mut adapter: Option<WS28xxSpiAdapter> = None;
-    if !mock {
-        match WS28xxSpiAdapter::new(&spi_device) {
-            Ok(a) => adapter = Some(a),
-            Err(e) => eprintln!("Failed to open SPI device {spi_device}: {e:?}"),
+    #[cfg(feature = "hardware")]
+    let mut controller: Option<rs_ws281x::Controller> = {
+        use rs_ws281x::{ChannelBuilder, ControllerBuilder, StripType};
+        let strip_type = match hw.order.as_str() {
+            "GRB" => StripType::Ws2811Grb,
+            "BGR" => StripType::Ws2811Bgr,
+            "RBG" => StripType::Ws2811Rbg,
+            "GBR" => StripType::Ws2811Gbr,
+            "BRG" => StripType::Ws2811Brg,
+            _ => StripType::Ws2811Rgb,
+        };
+        if !mock {
+            match ControllerBuilder::new()
+                .freq(800_000)
+                .dma(10)
+                .channel(
+                    0,
+                    ChannelBuilder::new()
+                        .pin(hw.gpio_pin as i32)
+                        .count(num_pixels as i32)
+                        .strip_type(strip_type)
+                        .brightness(255)
+                        .build(),
+                )
+                .build()
+            {
+                Ok(c) => Some(c),
+                Err(e) => {
+                    eprintln!("Failed to initialize WS281x on GPIO{}: {e:?}", hw.gpio_pin);
+                    None
+                }
+            }
+        } else {
+            None
         }
-    }
+    };
 
     let mut render_count: u32 = 0;
     let mut fps_window = Instant::now();
@@ -225,28 +241,35 @@ fn run_apply_loop(hw: HardwareConfig, buffer: Arc<Mutex<FrameBuffer>>, mock: boo
                 out.push_str("\x1b[K\x1b[1A\r");
                 print!("{out}");
                 std::io::stdout().flush().ok();
-            } else if let Some(ref mut adp) = adapter {
-                let mut colors: Vec<(u8, u8, u8)> = Vec::with_capacity(num_pixels);
-                for i in 0..num_pixels {
-                    let logical = if reversed {
-                        hw.index_start - i as i32
-                    } else {
-                        hw.index_start + i as i32
-                    };
-                    if skip.contains(&logical) {
-                        colors.push((0, 0, 0));
-                        continue;
+            } else {
+                #[cfg(feature = "hardware")]
+                if let Some(ref mut ctrl) = controller {
+                    let leds = ctrl.leds_mut(0);
+                    for i in 0..num_pixels.min(leds.len()) {
+                        let logical = if reversed {
+                            hw.index_start - i as i32
+                        } else {
+                            hw.index_start + i as i32
+                        };
+                        if skip.contains(&logical) {
+                            leds[i] = [0u8; 4];
+                            continue;
+                        }
+                        let src = i * bpp;
+                        let r = pixels.get(src).copied().unwrap_or(0);
+                        let g = pixels.get(src + 1).copied().unwrap_or(0);
+                        let b = pixels.get(src + 2).copied().unwrap_or(0);
+                        // RawColor = [u8; 4] is little-endian bytes of uint32_t 0x00RRGGBB,
+                        // so byte order is [B, G, R, W]. StripType handles wire-order reordering.
+                        leds[i] = [b, g, r, 0];
                     }
-                    let src = i * bpp;
-                    let r = pixels.get(src).copied().unwrap_or(0);
-                    let g = pixels.get(src + 1).copied().unwrap_or(0);
-                    let b = pixels.get(src + 2).copied().unwrap_or(0);
-                    // Note: W channel (bpp=4) is dropped — WS2818 strips are RGB only.
-                    colors.push(reorder(&hw.order, r, g, b));
+                    if let Err(e) = ctrl.render() {
+                        eprintln!("WS281x render error: {e:?}");
+                    }
                 }
-                if let Err(e) = adp.write_rgb(&colors) {
-                    eprintln!("SPI write error: {e:?}");
-                }
+
+                #[cfg(not(feature = "hardware"))]
+                eprintln!("Hardware support not compiled in — rebuild with --features hardware, or set MOCK_WS2818=1.");
             }
         }
 
@@ -277,7 +300,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config: StripConfig = serde_json::from_str(&fs::read_to_string(&config_path)?)?;
 
     let mock = env::var("MOCK_WS2818").map(|v| v == "1").unwrap_or(false);
-    let spi_device = env::var("SPI_DEVICE").unwrap_or_else(|_| "/dev/spidev0.0".to_string());
 
     let buffer: Arc<Mutex<FrameBuffer>> = Arc::new(Mutex::new(FrameBuffer::new()));
 
@@ -285,7 +307,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let hw = config.hardware.clone();
         let buf = Arc::clone(&buffer);
-        thread::spawn(move || run_apply_loop(hw, buf, mock, spi_device));
+        thread::spawn(move || run_apply_loop(hw, buf, mock));
     }
 
     // WebSocket connection loop with exponential backoff
