@@ -21,19 +21,21 @@ const fileFormat = format.combine(
   format.json(),
 )
 
-const logger = createLogger({
-  level: 'info',
-  transports: [
-    new transports.Console({ format: consoleFormat }),
-    new DailyRotateFile({
-      dirname: LOG_DIR,
-      filename: 'server-%DATE%.log',
-      datePattern: 'YYYY-MM-DD',
-      maxFiles: '14d',
-      zippedArchive: true,
-      format: fileFormat,
-    }),
-  ],
-})
+export type Logger = ReturnType<typeof createLogger>
 
-export default logger
+export function createStripLogger(stripId: string): Logger {
+  return createLogger({
+    level: 'info',
+    transports: [
+      new transports.Console({ format: consoleFormat }),
+      new DailyRotateFile({
+        dirname: LOG_DIR,
+        filename: `strip-${stripId}-%DATE%.log`,
+        datePattern: 'YYYY-MM-DD',
+        maxFiles: '14d',
+        zippedArchive: true,
+        format: fileFormat,
+      }),
+    ],
+  })
+}

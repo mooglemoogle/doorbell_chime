@@ -2,11 +2,13 @@ import { config } from 'dotenv'
 config()
 
 import { loadStripConfig } from './stripConfig.js'
+import { createStripLogger } from './logger.js'
 import { FrameBuffer } from './frameBuffer.js'
 import { ServerClient } from './serverClient.js'
 import { LightStrip } from './lightStrip.js'
 
 const stripConfig = await loadStripConfig()
+const logger = createStripLogger(stripConfig.stripId)
 const numPixels = Math.abs(stripConfig.hardware.index_end - stripConfig.hardware.index_start) + 1
 const buffer = new FrameBuffer()
 const strip = new LightStrip(stripConfig.hardware)
@@ -17,6 +19,7 @@ const client = new ServerClient(
   stripConfig.hardware.bpp,
   stripConfig.physical,
   buffer,
+  logger,
 )
 
 await strip.initialize()

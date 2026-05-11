@@ -11,11 +11,13 @@ Environment variables:
 """
 
 import json
+import logging
 import os
 import struct
 import sys
 import threading
 import time
+from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 
 import websocket  # websocket-client
@@ -210,6 +212,7 @@ class ServerClient:
         bpp: int,
         physical: dict,
         buffer: FrameBuffer,
+        logger: logging.Logger,
     ) -> None:
         self.config = config
         self.strip_id = strip_id
@@ -217,6 +220,7 @@ class ServerClient:
         self.bpp = bpp
         self.physical = physical
         self.buffer = buffer
+        self.log = logger
         self.reconnect_delay = RECONNECT_INITIAL_S
         self.destroyed = False
         self._ws: websocket.WebSocketApp | None = None
@@ -225,7 +229,7 @@ class ServerClient:
     def connect(self) -> None:
         url = f"ws://{self.config['host']}:{self.config['wsPort']}"
         while not self.destroyed:
-            print(f"Connecting to {url}...")
+            self.log.info("Connecting to %s", url)
             self._ws = websocket.WebSocketApp(
                 url,
                 on_open=self._on_open,
@@ -235,7 +239,7 @@ class ServerClient:
             )
             self._ws.run_forever()
             if not self.destroyed:
-                print(f"Reconnecting in {self.reconnect_delay:.0f}s...")
+                self.log.info("Reconnecting in %.0fs", self.reconnect_delay)
                 time.sleep(self.reconnect_delay)
                 self.reconnect_delay = min(self.reconnect_delay * 2, RECONNECT_MAX_S)
 
@@ -246,7 +250,7 @@ class ServerClient:
             self._ws.close()
 
     def _on_open(self, ws: websocket.WebSocketApp) -> None:
-        print("Connected to server")
+        self.log.info("Connected to server")
         self.reconnect_delay = RECONNECT_INITIAL_S
         self._send({
             "type": "register",
@@ -266,11 +270,11 @@ class ServerClient:
             parse_server_message(data, self.buffer)
 
     def _on_close(self, ws: websocket.WebSocketApp, code: int, msg: str) -> None:
-        print("Disconnected from server")
+        self.log.info("Disconnected from server")
         self._stop_status.set()
 
     def _on_error(self, ws: websocket.WebSocketApp, error: Exception) -> None:
-        print(f"WebSocket error: {error}", file=sys.stderr)
+        self.log.error("WebSocket error: %s", error)
 
     def _status_loop(self) -> None:
         while not self._stop_status.wait(STATUS_INTERVAL_S):
@@ -285,7 +289,33 @@ class ServerClient:
             try:
                 self._ws.send(json.dumps(msg))
             except Exception as e:
-                print(f"Send error: {e}", file=sys.stderr)
+                self.log.error("Send error: %s", e)
+
+
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+
+def setup_logging(strip_id: str) -> logging.Logger:
+    log_dir = Path.home() / ".local" / "lights-control" / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    lg = logging.getLogger(f"strip.{strip_id}")
+    lg.setLevel(logging.INFO)
+
+    console = logging.StreamHandler()
+    console.setFormatter(logging.Formatter("%(asctime)s %(levelname)s: %(message)s", datefmt="%H:%M:%S"))
+    lg.addHandler(console)
+
+    file_handler = TimedRotatingFileHandler(
+        log_dir / f"strip-{strip_id}.log",
+        when="midnight",
+        backupCount=14,
+    )
+    file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+    lg.addHandler(file_handler)
+
+    return lg
 
 
 # ---------------------------------------------------------------------------
@@ -353,6 +383,8 @@ def main() -> None:
         with open(config_path) as f:
             config = json.load(f)
 
+    logger = setup_logging(config["stripId"])
+
     hw = config["hardware"]
     num_pixels = abs(hw["index_end"] - hw["index_start"]) + 1
     bpp = hw.get("bpp", 3)
@@ -368,6 +400,7 @@ def main() -> None:
         bpp,
         config["physical"],
         buffer,
+        logger,
     )
 
     def apply_loop() -> None:

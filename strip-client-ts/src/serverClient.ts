@@ -1,6 +1,7 @@
 import WebSocket from 'ws'
 import { ServerConfig, PhysicalConfig } from './stripConfig.js'
 import { FrameBuffer, parseServerMessage } from './frameBuffer.js'
+import { Logger } from './logger.js'
 
 const RECONNECT_INITIAL_MS = 1000
 const RECONNECT_MAX_MS = 30000
@@ -20,17 +21,18 @@ export class ServerClient {
     private readonly bpp: 3 | 4,
     private readonly physical: PhysicalConfig,
     private readonly buffer: FrameBuffer,
+    private readonly logger: Logger,
   ) {}
 
   connect(): void {
     const url = `ws://${this.config.host}:${this.config.wsPort}`
-    console.log(`Connecting to ${url}...`)
+    this.logger.info(`Connecting to ${url}`)
 
     this.ws = new WebSocket(url)
     this.ws.binaryType = 'nodebuffer'
 
     this.ws.on('open', () => {
-      console.log('Connected to server')
+      this.logger.info('Connected to server')
       this.reconnectDelay = RECONNECT_INITIAL_MS
       this.register()
       this.startStatusHeartbeat()
@@ -41,14 +43,13 @@ export class ServerClient {
     })
 
     this.ws.on('close', () => {
-      console.log('Disconnected from server')
+      this.logger.info('Disconnected from server')
       this.stopStatusHeartbeat()
       if (!this.destroyed) this.scheduleReconnect()
     })
 
     this.ws.on('error', (err) => {
-      console.error('WebSocket error:', err.message)
-      // 'close' will fire after error, triggering reconnect
+      this.logger.error('WebSocket error', { message: err.message })
     })
   }
 
@@ -95,7 +96,7 @@ export class ServerClient {
   }
 
   private scheduleReconnect(): void {
-    console.log(`Reconnecting in ${this.reconnectDelay}ms...`)
+    this.logger.info(`Reconnecting in ${this.reconnectDelay}ms`)
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null
       this.connect()
