@@ -2,9 +2,9 @@
 **/__pycache__/**
 **/node_modules
 
-light-control/status.json
-light-control/light_config.json
-
 **/.env
 **/*.log*
 strip-client-rust/target
+lights-control-server/.yarn/**
+lights-control-server/dist/**
+web-client/dist/**
