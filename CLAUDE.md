@@ -2,101 +2,104 @@
 
 ## Project Overview
 
-This project controls an LED light strip on a Raspberry Pi and provides a web UI to manage it. The light strip runs animated patterns ("algorithms") organized into named "cycles" that rotate on a timer.
+This project controls LED light strips on Raspberry Pis and provides a web UI to manage them. The server runs animated patterns ("algorithms") organized into named "cycles" that rotate on a timer, generates pixel frames, and broadcasts them to strip clients over WebSocket.
 
 ## Architecture
 
 ```
-┌─────────────┐   HTTP    ┌──────────────────┐  ZMQ REQ  ┌───────────────────┐
-│ React UI    │ ────────► │ Express Server   │ ─────────► │ Light Controller  │
-│ web/client  │           │ web/server       │            │ light-control-ts  │
-└─────────────┘           └──────────────────┘            └───────────────────┘
-                                                                    ▲
-                          ┌──────────────────┐  ZMQ REQ            │
-                          │  Go CLI          │ ────────────────────►│
-                          │  lights-cli      │
-                          └──────────────────┘
+┌─────────────┐   HTTP    ┌──────────────────────────────────────┐
+│ React UI    │ ────────► │ web/server (Express + WebSocket)     │
+│ web/client  │           │  - Runs animation algorithms         │
+└─────────────┘           │  - Generates & broadcasts frames     │
+                          │  - HTTP API for commands             │
+                          └──────────────────────────────────────┘
+                                         │ WebSocket (port 3002)
+                          ┌──────────────┼──────────────┐
+                          ▼              ▼              ▼
+                   strip-client   strip-client-  strip-client-
+                   (TypeScript)     python         rust
+                   (Pi hardware)  (Pi hardware)  (Pi hardware)
 ```
 
-The light controller runs a **ZMQ REP socket on port 5555**. Both the web server and the Go CLI connect to it via ZMQ REQ. All messages are JSON. This is the critical integration point — anything communicating with the light controller must speak this protocol.
+Strip clients connect to the server, register themselves, and receive binary frame messages to drive their LED hardware.
 
 ## Directory Structure
 
 | Directory | Language | Purpose |
 |---|---|---|
-| `light-control/` | Python | Original LED controller (legacy, use `light-control-ts` instead) |
-| `light-control-ts/` | TypeScript/Node | Active LED controller — runs on the Pi |
-| `lights-cli/` | Go | CLI for sending commands from the terminal |
-| `web/server/` | TypeScript/Node | Express REST API, bridges HTTP → ZMQ |
+| `web/server/` | TypeScript/Node | Central controller — runs algorithms, serves HTTP API, broadcasts frames |
 | `web/client/` | TypeScript/React | Web UI (Blueprint.js, Emotion CSS, Jotai state) |
+| `web/data/` | JSON | Shared data — cycle definitions, strip configs |
+| `lights-cli/` | Go | CLI for sending commands (needs update: still uses ZMQ, see below) |
+| `strip-client/` | TypeScript/Node | WebSocket strip client — drives hardware via piixel |
+| `strip-client-python/` | Python | WebSocket strip client — drives hardware via neopixel |
+| `strip-client-rust/` | Rust | WebSocket strip client — drives hardware via rpi_ws281x |
 
 ## Running Things
 
-### Light controller
+### Web server (the controller)
 ```sh
-cd light-control-ts
-npm install
-npm start              # production (requires Raspberry Pi hardware)
-npm run dev            # development (mocks hardware in terminal via MOCK_PIIXEL=1)
+cd web/server
+yarn
+yarn start        # watch mode (ts-node)
 ```
 
-### Web server + client
+### Web client
 ```sh
-cd web/server && yarn build:live   # runs ts-node with watch
-cd web/client && yarn dev          # webpack watch
+cd web/client
+yarn
+yarn dev          # webpack watch
+# yarn build      # production build → web/client/dist/ (served by server)
 ```
 
-### Go CLI (build once, copy binary to Pi)
+### Strip clients — pick one per Pi
+
+**TypeScript:**
 ```sh
-cd lights-cli
-go build -o lights
-./lights --help
+cd strip-client && npm install
+npm start                    # production
+MOCK_PIIXEL=1 npm start      # mock terminal output
 ```
 
-## ZMQ Command Protocol
-
-All commands are JSON sent to `tcp://localhost:5555`. The controller replies with:
-```json
-{ "accepted": true, "response": <optional data> }
-// or
-{ "accepted": false, "message": "error description" }
+**Python:**
+```sh
+cd strip-client-python && pipenv install
+pipenv run python strip_client.py
+MOCK_NEOPIXEL=1 pipenv run python strip_client.py
 ```
 
-| Command | Payload | Notes |
+**Rust (mock mode):**
+```sh
+cd strip-client-rust
+MOCK_WS2818=1 cargo run
+```
+
+**Rust (build for Pi):**
+```sh
+cd strip-client-rust
+./build-pi.sh               # requires OrbStack or Docker Desktop
+scp strip-client-pi pi@raspberrypi.local:~/
+```
+
+## HTTP Command API
+
+`web/server` exposes commands at `/api/actions/*`:
+
+| Method | Path | Notes |
 |---|---|---|
-| `on` | — | Start running the current cycle |
-| `off` | — | Turn off the lights |
-| `next` | — | Skip to the next algorithm in the cycle |
-| `set_brightness` | `{ brightness: 0.0–1.0 }` | |
-| `set_cycle` | `{ name: "Default" }` | Must match a filename in `cycles/` |
-| `get_status` | — | Returns `{ brightness, transition_time, running, current_cycle }` |
-| `get_cycles` | — | Returns array of cycle names |
+| `GET` | `/api/actions/get_status` | Returns `{ brightness, transition_time, running, current_cycle }` |
+| `GET` | `/api/actions/get_cycles` | Returns array of cycle names |
+| `POST` | `/api/actions/on` | Start running the current cycle |
+| `POST` | `/api/actions/off` | Turn off the lights |
+| `POST` | `/api/actions/next` | Skip to next algorithm |
+| `POST` | `/api/actions/set_brightness/:value` | 0.0–1.0 |
+| `POST` | `/api/actions/set_cycle/:name` | Must match a filename in `web/data/cycles/` |
+
+> **Note:** `lights-cli` currently uses ZMQ and is broken — it needs to be updated to use these HTTP endpoints instead.
 
 ## Configuration Files
 
-These JSON files are **shared between** `light-control/` and `light-control-ts/` — same format for both.
-
-### `light-control-ts/light_config.json`
-Defines the physical LED strips (copied from `light_config_sample.json`):
-```json
-{
-  "light_strips": [{
-    "index_start": 0,    // logical pixel index start
-    "index_end": 29,     // logical pixel index end (reversed if end < start)
-    "gpio_pin": 18,      // GPIO pin number
-    "bpp": 3,            // bytes per pixel: 3 = RGB, 4 = RGBW
-    "order": "GRB",      // color channel order
-    "skip": []           // pixel indices to leave dark (e.g. obstructed by mount)
-  }]
-}
-```
-
-### `light-control-ts/status.json` (auto-generated, persisted across restarts)
-```json
-{ "brightness": 0.5, "transition_time": 2000, "running": false, "current_cycle": "Default" }
-```
-
-### `light-control/cycles/*.json` (shared)
+### `web/data/cycles/*.json`
 Each file defines a named cycle of algorithms:
 ```json
 {
@@ -108,7 +111,22 @@ Each file defines a named cycle of algorithms:
 }
 ```
 
-## Adding a New Algorithm (`light-control-ts`)
+### `web/server/status.json` (auto-generated, persisted across restarts)
+```json
+{ "brightness": 0.5, "transition_time": 2000, "running": false, "current_cycle": "Default" }
+```
+
+### `strip_config.json` (one per strip client)
+```json
+{
+  "stripId": "my-strip",
+  "server": { "host": "localhost", "wsPort": 3002 },
+  "hardware": { "index_start": 0, "index_end": 29, "gpio_pin": 18, "bpp": 3, "order": "GRB", "skip": [] },
+  "physical": { "length_meters": 1.0, "location": { "start": { "x": 0, "y": 3.5, "z": 0 }, "end": { "x": 1, "y": 3.5, "z": 0 } } }
+}
+```
+
+## Adding a New Algorithm (`web/server`)
 
 1. Create `src/algorithms/myAlgorithm/config.ts` exporting an `AlgorithmConfig`
 2. Create `src/algorithms/myAlgorithm/myAlgorithm.ts` with a class extending `BaseAlgorithm`
@@ -132,27 +150,23 @@ class Algorithm extends BaseAlgorithm {
 }
 ```
 
-**`Pixel`** stores color in HSV + white channel (all 0.0–1.0). The light strip converts HSV → RGB when rendering. Use `pixel.set(hue, sat, val)` or mutate fields directly.
+**`Pixel`** stores color in HSV + white channel (all 0.0–1.0). Use `pixel.set(hue, sat, val)` or mutate fields directly.
 
 **`Pulse`** is a helper for applying a glow/blob at a position along the strip with configurable falloff on each side.
 
-## light-control-ts Key Notes
+## web/server Key Notes
 
-- Runtime: **Node.js** with `tsx` (not Bun — zeromq is incompatible with Bun)
-- `src/commandWatcher.ts`: ZMQ commands arrive on a background async loop and are queued; the main loop processes them each frame via `runner.runCycle()`
-- `src/lightStrip.ts`: Converts `Pixel[]` (HSV) → packed `Uint32Array` (RGB) for piixel. In dev mode (`MODE=DEVELOPMENT`) it prints colored blocks to the terminal instead of driving hardware
-- `src/timer.ts`: FPS-locked loop using `setTimeout` — `updateFps()` is called each frame so the rate can change when algorithms change
-- piixel only works on Raspberry Pi (not Pi 5). Set `MOCK_PIIXEL=1` for local dev
+- Runtime: **Node.js** with `ts-node` / `tsx`
+- `src/animation/runner.ts`: FPS-locked animation loop — runs algorithms, calls `FrameGenerator` each frame
+- `src/animation/frameGenerator.ts`: Converts `Pixel[]` (HSV→RGB) to binary frame messages, broadcasts to all registered strip clients
+- `src/websocket/server.ts`: WebSocket server — strip clients register here and receive binary frames
+- `src/strips/registry.ts`: Tracks connected strips and their pixel layout
+- `src/timer.ts`: FPS-locked loop using `setTimeout`
+- Cycles loaded from `web/data/cycles/` (path overridable via `CYCLES_DIR` env var)
 
 ## Web Client Notes
 
 - Built with React 18, Blueprint.js (icons/components), Emotion (CSS-in-JS), Jotai (state), React Router
-- Polls `get_status` and `get_cycles` every 30 seconds via `useInterval`
-- API base: `/api/actions/*` — all proxied through the Express server to ZMQ
+- Polls `get_status` and `get_cycles` every 30 seconds
+- API base: `/api/actions/*`
 - Build: `yarn build` outputs to `web/client/dist/`, served statically by the Express server
-
-## lights-cli Notes
-
-- Single `main.go` with all commands. Uses `cobra` (subcommands) and `go-zeromq/zmq4` (pure Go ZMQ, no C library needed)
-- Commands: `on`, `off`, `next`, `brightness <0.0-1.0>`, `status`, `cycles`, `set-cycle <name>`
-- Build a standalone binary: `go build -o lights && scp lights pi@raspberrypi:~/bin/`

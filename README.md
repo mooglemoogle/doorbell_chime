@@ -5,24 +5,26 @@ LED light strip controller with a web UI. Runs animated patterns ("algorithms") 
 ## Architecture
 
 ```
-┌─────────────┐   HTTP    ┌──────────────────┐  ZMQ REQ  ┌───────────────────┐
-│ React UI    │ ────────► │ Express Server   │ ─────────► │ Light Controller  │
-│ web/client  │           │ web/server       │            │ light-control-ts  │
-└─────────────┘           └──────────────────┘            └───────────────────┘
-                                                                    │ WebSocket
-                                                           ┌────────┴────────┐
-                                                           │  Strip Clients  │
-                                                           │  (Pi hardware)  │
-                                                           └─────────────────┘
+┌─────────────┐   HTTP    ┌──────────────────────────────────────┐
+│ React UI    │ ────────► │ web/server (Express + WebSocket)     │
+│ web/client  │           │  - Runs animation algorithms         │
+└─────────────┘           │  - Generates & broadcasts frames     │
+                          └──────────────────────────────────────┘
+                                       │ WebSocket (port 3002)
+                          ┌────────────┼────────────┐
+                          ▼            ▼            ▼
+                   strip-client  strip-client- strip-client-
+                   (TypeScript)    python         rust
+                   (Pi hardware) (Pi hardware) (Pi hardware)
 ```
 
 ## Components
 
 | Directory | Language | Purpose |
 |---|---|---|
-| `light-control-ts/` | TypeScript/Node | LED controller — runs on the Pi |
-| `web/server/` | TypeScript/Node | Express REST API, bridges HTTP → ZMQ |
+| `web/server/` | TypeScript/Node | Central controller — algorithms, HTTP API, WebSocket frame broadcast |
 | `web/client/` | TypeScript/React | Web UI |
+| `web/data/` | JSON | Cycle definitions and strip configs |
 | `lights-cli/` | Go | CLI for sending commands |
 | `strip-client/` | TypeScript/Node | WebSocket strip client (TypeScript) |
 | `strip-client-python/` | Python | WebSocket strip client (Python/neopixel) |
@@ -31,17 +33,6 @@ LED light strip controller with a web UI. Runs animated patterns ("algorithms") 
 ---
 
 ## Building & Running
-
-### Light Controller (`light-control-ts`)
-
-```sh
-cd light-control-ts
-npm install
-npm start          # production (requires Pi hardware)
-npm run dev        # mock mode — prints colored blocks in terminal
-```
-
-Copy `light_config_sample.json` to `light_config.json` and configure your strip(s) before running.
 
 ### Web Server + Client
 
