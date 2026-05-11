@@ -1,0 +1,16 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+websocket-client = ">=1.6.0"
+# LED hardware — uncomment on the Pi (not needed with MOCK_NEOPIXEL=1):
+rpi_ws281x = ">=4.3.0"
+adafruit-blinka = ">=8.0.0"
+adafruit-circuitpython-neopixel = ">=6.0.0"
+
+[dev-packages]
+
+[requires]
+python_version = "3.13"

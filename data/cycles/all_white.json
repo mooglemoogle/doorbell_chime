@@ -1,0 +1,10 @@
+{
+    "name": "All White",
+    "cycles": [
+        {
+            "algorithm": "white",
+            "seconds_in_cycle": 120,
+            "options": {}
+        }
+    ]
+}
