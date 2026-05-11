@@ -111,12 +111,15 @@ Each file defines a named cycle of algorithms:
 }
 ```
 
-### `lights-control-server/status.json` (auto-generated, persisted across restarts)
+### `~/.local/lights-control/status.json` (auto-generated, persisted across restarts)
 ```json
 { "brightness": 0.5, "transition_time": 2000, "running": false, "current_cycle": "Default" }
 ```
 
-### `strip_config.json` (one per strip client)
+### `~/.local/lights-control/strips_config.json` (auto-generated when strips connect)
+Array of strip entries persisted by the server so layout survives restarts.
+
+### `~/.local/lights-control/strip_config.json` (one per strip client)
 ```json
 {
   "stripId": "my-strip",
@@ -125,6 +128,8 @@ Each file defines a named cycle of algorithms:
   "physical": { "length_meters": 1.0, "location": { "start": { "x": 0, "y": 3.5, "z": 0 }, "end": { "x": 1, "y": 3.5, "z": 0 } } }
 }
 ```
+
+Override any config path with the `STRIP_CONFIG` environment variable.
 
 ## Adding a New Algorithm (`lights-control-server`)
 

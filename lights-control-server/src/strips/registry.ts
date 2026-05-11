@@ -1,5 +1,6 @@
-import { readFileSync, writeFileSync, existsSync } from 'fs'
-import { resolve } from 'path'
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
+import { resolve, join, dirname } from 'path'
+import { homedir } from 'os'
 
 export interface PhysicalLocation {
   x: number
@@ -32,8 +33,9 @@ export class StripRegistry {
   strips: ResolvedStrip[] = []
   totalPixels = 0
 
-  constructor(savePath = resolve(__dirname, '../../../data/strips_config.json')) {
+  constructor(savePath = join(homedir(), '.local', 'lights-control', 'strips_config.json')) {
     this.savePath = savePath
+    mkdirSync(dirname(savePath), { recursive: true })
     if (existsSync(savePath)) {
       const entries = JSON.parse(readFileSync(savePath, 'utf-8')) as StripRegistryEntry[]
       for (const entry of entries) this.entryMap.set(entry.stripId, entry)

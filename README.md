@@ -61,9 +61,9 @@ scp lights pi@raspberrypi.local:~/bin/
 
 ## Strip Clients
 
-Each strip client reads a `strip_config.json`, connects to the light controller's WebSocket server, and drives a physical LED strip. Run one client per strip.
+Each strip client reads `~/.local/lights-control/strip_config.json` (override with `STRIP_CONFIG` env var), connects to the light controller's WebSocket server, and drives a physical LED strip. Run one client per strip.
 
-### `strip_config.json` format
+### `~/.local/lights-control/strip_config.json` format
 
 ```json
 {
@@ -140,4 +140,4 @@ ssh pi@raspberrypi.local './strip-client-pi'
 | Variable | Default | Description |
 |---|---|---|
 | `MOCK_WS2818` | `0` | Set to `1` for mock terminal output |
-| `STRIP_CONFIG` | `strip_config.json` | Path to config file |
+| `STRIP_CONFIG` | `~/.local/lights-control/strip_config.json` | Path to config file |

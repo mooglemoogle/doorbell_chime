@@ -7,7 +7,7 @@ buffers incoming frames, and drives the LED strip via neopixel.
 
 Environment variables:
   MOCK_NEOPIXEL=1    Print colored terminal blocks instead of driving hardware
-  STRIP_CONFIG=path  Path to strip_config.json (default: ./strip_config.json)
+  STRIP_CONFIG=path  Path to strip_config.json (default: ~/.local/lights-control/strip_config.json)
 """
 
 import json
@@ -289,15 +289,69 @@ class ServerClient:
 
 
 # ---------------------------------------------------------------------------
+# Setup wizard
+# ---------------------------------------------------------------------------
+
+def _ask(prompt: str, default: str) -> str:
+    answer = input(f"  {prompt} [{default}]: ").strip()
+    return answer if answer else default
+
+
+def run_setup_wizard(config_path: str) -> dict:
+    print(f"\nNo config found at {config_path}. Let's set one up.\n")
+
+    strip_id      = _ask("Strip ID",                           "my-strip")
+    host          = _ask("Server host",                        "localhost")
+    ws_port       = int(_ask("Server WebSocket port",          "3002"))
+    index_start   = int(_ask("LED index start",                "0"))
+    index_end     = int(_ask("LED index end (inclusive)",      "29"))
+    gpio_pin      = int(_ask("GPIO pin",                       "18"))
+    bpp           = int(_ask("Bytes per pixel (3=RGB, 4=RGBW)", "3"))
+    order         =     _ask("Pixel order",                    "GRB")
+    length_meters = float(_ask("Strip length (meters)",        "1.0"))
+
+    config = {
+        "stripId": strip_id,
+        "server": {"host": host, "wsPort": ws_port},
+        "hardware": {
+            "index_start": index_start,
+            "index_end": index_end,
+            "gpio_pin": gpio_pin,
+            "bpp": bpp,
+            "order": order,
+            "skip": [],
+        },
+        "physical": {
+            "length_meters": length_meters,
+            "location": {
+                "start": {"x": 0.0, "y": 0.0, "z": 0.0},
+                "end":   {"x": length_meters, "y": 0.0, "z": 0.0},
+            },
+        },
+    }
+
+    Path(config_path).parent.mkdir(parents=True, exist_ok=True)
+    with open(config_path, "w") as f:
+        json.dump(config, f, indent=2)
+    print(f"\nConfig saved to {config_path}\n")
+    return config
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
 def main() -> None:
-    config_path = os.environ.get(
-        "STRIP_CONFIG", str(Path(__file__).parent / "strip_config.json")
-    )
-    with open(config_path) as f:
-        config = json.load(f)
+    env_path = os.environ.get("STRIP_CONFIG")
+    config_path = env_path or str(Path.home() / ".local" / "lights-control" / "strip_config.json")
+
+    if not Path(config_path).exists():
+        if env_path:
+            raise FileNotFoundError(f"strip_config.json not found at {config_path}")
+        config = run_setup_wizard(config_path)
+    else:
+        with open(config_path) as f:
+            config = json.load(f)
 
     hw = config["hardware"]
     num_pixels = abs(hw["index_end"] - hw["index_start"]) + 1

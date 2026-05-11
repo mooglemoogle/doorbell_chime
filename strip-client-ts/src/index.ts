@@ -6,7 +6,7 @@ import { FrameBuffer } from './frameBuffer.js'
 import { ServerClient } from './serverClient.js'
 import { LightStrip } from './lightStrip.js'
 
-const stripConfig = loadStripConfig()
+const stripConfig = await loadStripConfig()
 const numPixels = Math.abs(stripConfig.hardware.index_end - stripConfig.hardware.index_start) + 1
 const buffer = new FrameBuffer()
 const strip = new LightStrip(stripConfig.hardware)

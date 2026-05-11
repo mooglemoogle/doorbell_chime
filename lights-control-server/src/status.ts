@@ -1,4 +1,6 @@
-import { readFileSync, writeFileSync, existsSync } from 'fs'
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
+import { homedir } from 'os'
+import { join, dirname } from 'path'
 
 export interface StatusProperties {
   brightness: number
@@ -19,8 +21,9 @@ export class Status {
   private readonly statusFilePath: string
   private debounceTimer: ReturnType<typeof setTimeout> | null = null
 
-  constructor(statusFilePath = './status.json') {
+  constructor(statusFilePath = join(homedir(), '.local', 'lights-control', 'status.json')) {
     this.statusFilePath = statusFilePath
+    mkdirSync(dirname(this.statusFilePath), { recursive: true })
     this.properties = this.loadStatusFile()
   }
 

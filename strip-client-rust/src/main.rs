@@ -6,7 +6,7 @@ buffers incoming timestamped frames, and drives the LED strip via SPI.
 
 Environment variables:
   MOCK_WS2818=1      Print colored terminal blocks instead of driving hardware
-  STRIP_CONFIG=path  Path to strip_config.json (default: ./strip_config.json)
+  STRIP_CONFIG=path  Path to strip_config.json (default: ~/.local/lights-control/strip_config.json)
 
 Build flags:
   --features hardware   Enable WS281x hardware output (requires rpi_ws281x C library)
@@ -285,6 +285,55 @@ fn run_apply_loop(hw: HardwareConfig, buffer: Arc<Mutex<FrameBuffer>>, mock: boo
 }
 
 // ---------------------------------------------------------------------------
+// Setup wizard
+// ---------------------------------------------------------------------------
+
+fn prompt(label: &str, default: &str) -> String {
+    print!("  {label} [{default}]: ");
+    std::io::stdout().flush().ok();
+    let mut buf = String::new();
+    std::io::stdin().read_line(&mut buf).expect("Failed to read input");
+    let trimmed = buf.trim().to_string();
+    if trimmed.is_empty() { default.to_string() } else { trimmed }
+}
+
+fn run_setup_wizard(config_path: &str) -> StripConfig {
+    println!("\nNo config found at {config_path}. Let's set one up.\n");
+
+    let strip_id      =          prompt("Strip ID",                           "my-strip");
+    let host          =          prompt("Server host",                        "localhost");
+    let ws_port: u16  =          prompt("Server WebSocket port",              "3002").parse().unwrap_or(3002);
+    let index_start: i32 =       prompt("LED index start",                   "0").parse().unwrap_or(0);
+    let index_end: i32 =         prompt("LED index end (inclusive)",          "29").parse().unwrap_or(29);
+    let gpio_pin: u8  =          prompt("GPIO pin",                          "18").parse().unwrap_or(18);
+    let bpp: u8       =          prompt("Bytes per pixel (3=RGB, 4=RGBW)",   "3").parse().unwrap_or(3);
+    let order         =          prompt("Pixel order",                        "GRB");
+    let length_meters: f64 =     prompt("Strip length (meters)",              "1.0").parse().unwrap_or(1.0);
+
+    let config = StripConfig {
+        strip_id,
+        server: ServerConfig { host, ws_port },
+        hardware: HardwareConfig { index_start, index_end, gpio_pin, bpp, order, skip: vec![] },
+        physical: serde_json::json!({
+            "length_meters": length_meters,
+            "location": {
+                "start": { "x": 0.0, "y": 0.0, "z": 0.0 },
+                "end":   { "x": length_meters, "y": 0.0, "z": 0.0 }
+            }
+        }),
+    };
+
+    let path = std::path::Path::new(config_path);
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).expect("Failed to create config directory");
+    }
+    fs::write(config_path, serde_json::to_string_pretty(&config).unwrap())
+        .expect("Failed to write config file");
+    println!("\nConfig saved to {config_path}\n");
+    config
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -296,8 +345,19 @@ fn now_ms() -> u64 {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let config_path = env::var("STRIP_CONFIG").unwrap_or_else(|_| "strip_config.json".to_string());
-    let config: StripConfig = serde_json::from_str(&fs::read_to_string(&config_path)?)?;
+    let env_path = env::var("STRIP_CONFIG").ok();
+    let config_path = env_path.clone().unwrap_or_else(|| {
+        let home = env::var("HOME").expect("HOME environment variable not set");
+        format!("{home}/.local/lights-control/strip_config.json")
+    });
+
+    let config: StripConfig = if std::path::Path::new(&config_path).exists() {
+        serde_json::from_str(&fs::read_to_string(&config_path)?)?
+    } else if env_path.is_some() {
+        return Err(format!("strip_config.json not found at {config_path}").into());
+    } else {
+        run_setup_wizard(&config_path)
+    };
 
     let mock = env::var("MOCK_WS2818").map(|v| v == "1").unwrap_or(false);
 
