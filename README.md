@@ -6,27 +6,27 @@ LED light strip controller with a web UI. Runs animated patterns ("algorithms") 
 
 ```
 ┌─────────────┐   HTTP    ┌──────────────────────────────────────┐
-│ React UI    │ ────────► │ web/server (Express + WebSocket)     │
-│ web/client  │           │  - Runs animation algorithms         │
+│ React UI    │ ────────► │ lights-control-server (Express + WS) │
+│ web-client  │           │  - Runs animation algorithms         │
 └─────────────┘           │  - Generates & broadcasts frames     │
                           └──────────────────────────────────────┘
                                        │ WebSocket (port 3002)
                           ┌────────────┼────────────┐
                           ▼            ▼            ▼
-                   strip-client  strip-client- strip-client-
-                   (TypeScript)    python         rust
-                   (Pi hardware) (Pi hardware) (Pi hardware)
+                strip-client-ts strip-client- strip-client-
+                (TypeScript)      python         rust
+                (Pi hardware)  (Pi hardware) (Pi hardware)
 ```
 
 ## Components
 
 | Directory | Language | Purpose |
 |---|---|---|
-| `web/server/` | TypeScript/Node | Central controller — algorithms, HTTP API, WebSocket frame broadcast |
-| `web/client/` | TypeScript/React | Web UI |
-| `web/data/` | JSON | Cycle definitions and strip configs |
+| `lights-control-server/` | TypeScript/Node | Central controller — algorithms, HTTP API, WebSocket frame broadcast |
+| `web-client/` | TypeScript/React | Web UI |
+| `data/` | JSON | Cycle definitions and strip configs |
 | `lights-cli/` | Go | CLI for sending commands |
-| `strip-client/` | TypeScript/Node | WebSocket strip client (TypeScript) |
+| `strip-client-ts/` | TypeScript/Node | WebSocket strip client (TypeScript) |
 | `strip-client-python/` | Python | WebSocket strip client (Python/neopixel) |
 | `strip-client-rust/` | Rust | WebSocket strip client (Rust/rpi_ws281x) |
 
@@ -38,10 +38,10 @@ LED light strip controller with a web UI. Runs animated patterns ("algorithms") 
 
 ```sh
 # Server (TypeScript, watch mode)
-cd web/server && yarn && yarn start
+cd lights-control-server && yarn && yarn start
 
 # Client (React, watch mode)
-cd web/client && yarn && yarn dev
+cd web-client && yarn && yarn dev
 ```
 
 The client is served statically by the Express server after `yarn build`.
@@ -87,10 +87,10 @@ Each strip client reads a `strip_config.json`, connects to the light controller'
 }
 ```
 
-### TypeScript strip client (`strip-client/`)
+### TypeScript strip client (`strip-client-ts/`)
 
 ```sh
-cd strip-client
+cd strip-client-ts
 npm install
 npm start          # production
 MOCK_PIIXEL=1 npm start   # mock mode

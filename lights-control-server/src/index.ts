@@ -61,7 +61,7 @@ app.use(
 
 app.use(routes(() => runner, manager));
 
-app.use(express.static(resolve(__dirname, '../../client/dist')));
+app.use(express.static(resolve(__dirname, '../../web-client/dist')));
 
 app.use('*', (_req, res) => {
     res.status(StatusCodes.NOT_FOUND).send('404 Not Found');

@@ -8,15 +8,15 @@ This project controls LED light strips on Raspberry Pis and provides a web UI to
 
 ```
 ┌─────────────┐   HTTP    ┌──────────────────────────────────────┐
-│ React UI    │ ────────► │ web/server (Express + WebSocket)     │
-│ web/client  │           │  - Runs animation algorithms         │
+│ React UI    │ ────────► │ lights-control-server (Express + WS) │
+│ web-client  │           │  - Runs animation algorithms         │
 └─────────────┘           │  - Generates & broadcasts frames     │
                           │  - HTTP API for commands             │
                           └──────────────────────────────────────┘
                                          │ WebSocket (port 3002)
                           ┌──────────────┼──────────────┐
                           ▼              ▼              ▼
-                   strip-client   strip-client-  strip-client-
+                   strip-client-ts strip-client-  strip-client-
                    (TypeScript)     python         rust
                    (Pi hardware)  (Pi hardware)  (Pi hardware)
 ```
@@ -27,11 +27,11 @@ Strip clients connect to the server, register themselves, and receive binary fra
 
 | Directory | Language | Purpose |
 |---|---|---|
-| `web/server/` | TypeScript/Node | Central controller — runs algorithms, serves HTTP API, broadcasts frames |
-| `web/client/` | TypeScript/React | Web UI (Blueprint.js, Emotion CSS, Jotai state) |
-| `web/data/` | JSON | Shared data — cycle definitions, strip configs |
+| `lights-control-server/` | TypeScript/Node | Central controller — runs algorithms, serves HTTP API, broadcasts frames |
+| `web-client/` | TypeScript/React | Web UI (Blueprint.js, Emotion CSS, Jotai state) |
+| `data/` | JSON | Shared data — cycle definitions, strip configs |
 | `lights-cli/` | Go | CLI for sending commands (needs update: still uses ZMQ, see below) |
-| `strip-client/` | TypeScript/Node | WebSocket strip client — drives hardware via piixel |
+| `strip-client-ts/` | TypeScript/Node | WebSocket strip client — drives hardware via piixel |
 | `strip-client-python/` | Python | WebSocket strip client — drives hardware via neopixel |
 | `strip-client-rust/` | Rust | WebSocket strip client — drives hardware via rpi_ws281x |
 
@@ -39,24 +39,24 @@ Strip clients connect to the server, register themselves, and receive binary fra
 
 ### Web server (the controller)
 ```sh
-cd web/server
+cd lights-control-server
 yarn
 yarn start        # watch mode (ts-node)
 ```
 
 ### Web client
 ```sh
-cd web/client
+cd web-client
 yarn
 yarn dev          # webpack watch
-# yarn build      # production build → web/client/dist/ (served by server)
+# yarn build      # production build → web-client/dist/ (served by server)
 ```
 
 ### Strip clients — pick one per Pi
 
 **TypeScript:**
 ```sh
-cd strip-client && npm install
+cd strip-client-ts && npm install
 npm start                    # production
 MOCK_PIIXEL=1 npm start      # mock terminal output
 ```
@@ -93,13 +93,13 @@ scp strip-client-pi pi@raspberrypi.local:~/
 | `POST` | `/api/actions/off` | Turn off the lights |
 | `POST` | `/api/actions/next` | Skip to next algorithm |
 | `POST` | `/api/actions/set_brightness/:value` | 0.0–1.0 |
-| `POST` | `/api/actions/set_cycle/:name` | Must match a filename in `web/data/cycles/` |
+| `POST` | `/api/actions/set_cycle/:name` | Must match a filename in `data/cycles/` |
 
 > **Note:** `lights-cli` currently uses ZMQ and is broken — it needs to be updated to use these HTTP endpoints instead.
 
 ## Configuration Files
 
-### `web/data/cycles/*.json`
+### `data/cycles/*.json`
 Each file defines a named cycle of algorithms:
 ```json
 {
@@ -111,7 +111,7 @@ Each file defines a named cycle of algorithms:
 }
 ```
 
-### `web/server/status.json` (auto-generated, persisted across restarts)
+### `lights-control-server/status.json` (auto-generated, persisted across restarts)
 ```json
 { "brightness": 0.5, "transition_time": 2000, "running": false, "current_cycle": "Default" }
 ```
@@ -126,7 +126,7 @@ Each file defines a named cycle of algorithms:
 }
 ```
 
-## Adding a New Algorithm (`web/server`)
+## Adding a New Algorithm (`lights-control-server`)
 
 1. Create `src/algorithms/myAlgorithm/config.ts` exporting an `AlgorithmConfig`
 2. Create `src/algorithms/myAlgorithm/myAlgorithm.ts` with a class extending `BaseAlgorithm`
@@ -154,7 +154,7 @@ class Algorithm extends BaseAlgorithm {
 
 **`Pulse`** is a helper for applying a glow/blob at a position along the strip with configurable falloff on each side.
 
-## web/server Key Notes
+## lights-control-server Key Notes
 
 - Runtime: **Node.js** with `ts-node` / `tsx`
 - `src/animation/runner.ts`: FPS-locked animation loop — runs algorithms, calls `FrameGenerator` each frame
@@ -162,11 +162,11 @@ class Algorithm extends BaseAlgorithm {
 - `src/websocket/server.ts`: WebSocket server — strip clients register here and receive binary frames
 - `src/strips/registry.ts`: Tracks connected strips and their pixel layout
 - `src/timer.ts`: FPS-locked loop using `setTimeout`
-- Cycles loaded from `web/data/cycles/` (path overridable via `CYCLES_DIR` env var)
+- Cycles loaded from `data/cycles/` (path overridable via `CYCLES_DIR` env var)
 
 ## Web Client Notes
 
 - Built with React 18, Blueprint.js (icons/components), Emotion (CSS-in-JS), Jotai (state), React Router
 - Polls `get_status` and `get_cycles` every 30 seconds
 - API base: `/api/actions/*`
-- Build: `yarn build` outputs to `web/client/dist/`, served statically by the Express server
+- Build: `yarn build` outputs to `web-client/dist/`, served statically by the Express server
