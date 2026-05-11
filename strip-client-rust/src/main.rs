@@ -18,9 +18,13 @@ use std::env;
 use std::fs;
 use std::io::Write as _;
 use std::net::TcpStream;
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+
+use tracing::{error, info, warn};
+use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -190,7 +194,7 @@ fn run_apply_loop(hw: HardwareConfig, buffer: Arc<Mutex<FrameBuffer>>, mock: boo
             {
                 Ok(c) => Some(c),
                 Err(e) => {
-                    eprintln!("Failed to initialize WS281x on GPIO{}: {e:?}", hw.gpio_pin);
+                    error!("Failed to initialize WS281x on GPIO{}: {e:?}", hw.gpio_pin);
                     None
                 }
             }
@@ -264,12 +268,12 @@ fn run_apply_loop(hw: HardwareConfig, buffer: Arc<Mutex<FrameBuffer>>, mock: boo
                         leds[i] = [b, g, r, 0];
                     }
                     if let Err(e) = ctrl.render() {
-                        eprintln!("WS281x render error: {e:?}");
+                        error!("WS281x render error: {e:?}");
                     }
                 }
 
                 #[cfg(not(feature = "hardware"))]
-                eprintln!("Hardware support not compiled in — rebuild with --features hardware, or set MOCK_WS2818=1.");
+                warn!("Hardware support not compiled in — rebuild with --features hardware, or set MOCK_WS2818=1.");
             }
         }
 
@@ -359,6 +363,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         run_setup_wizard(&config_path)
     };
 
+    let log_dir = PathBuf::from(env::var("HOME").expect("HOME not set"))
+        .join(".local").join("lights-control").join("logs");
+    fs::create_dir_all(&log_dir).expect("Failed to create log directory");
+
+    let file_appender = tracing_appender::rolling::RollingFileAppender::builder()
+        .rotation(tracing_appender::rolling::Rotation::DAILY)
+        .filename_prefix(format!("strip-{}", config.strip_id))
+        .filename_suffix("log")
+        .max_log_files(14)
+        .build(&log_dir)
+        .expect("Failed to initialize log file");
+    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+
+    tracing_subscriber::registry()
+        .with(fmt::layer().with_writer(std::io::stderr).with_target(false))
+        .with(fmt::layer().with_ansi(false).with_writer(non_blocking).with_target(false))
+        .init();
+
     let mock = env::var("MOCK_WS2818").map(|v| v == "1").unwrap_or(false);
 
     let buffer: Arc<Mutex<FrameBuffer>> = Arc::new(Mutex::new(FrameBuffer::new()));
@@ -383,7 +405,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     const STATUS_INTERVAL: Duration = Duration::from_secs(5);
 
     loop {
-        println!("Connecting to {url}...");
+        info!("Connecting to {url}");
 
         let result = TcpStream::connect(&addr).and_then(|stream| {
             // Short read timeout so the status heartbeat can fire even with no traffic
@@ -392,11 +414,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
 
         match result {
-            Err(e) => eprintln!("TCP connect error: {e}"),
+            Err(e) => error!("TCP connect error: {e}"),
             Ok(stream) => match tungstenite::client(&url, stream) {
-                Err(e) => eprintln!("WebSocket handshake error: {e}"),
+                Err(e) => error!("WebSocket handshake error: {e}"),
                 Ok((mut socket, _)) => {
-                    println!("Connected to server");
+                    info!("Connected to server");
                     reconnect_delay = Duration::from_secs(1);
 
                     // Register this strip with the server
@@ -443,21 +465,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 // Read timeout — loop to check status timer
                             }
                             Err(e) => {
-                                eprintln!("WebSocket error: {e}");
+                                error!("WebSocket error: {e}");
                                 break 'recv;
                             }
                         }
                     }
 
-                    println!("Disconnected from server");
+                    info!("Disconnected from server");
                 }
             },
         }
 
-        println!(
-            "Reconnecting in {}s...",
-            reconnect_delay.as_secs()
-        );
+        info!("Reconnecting in {}s", reconnect_delay.as_secs());
         thread::sleep(reconnect_delay);
         reconnect_delay = (reconnect_delay * 2).min(RECONNECT_MAX);
     }
