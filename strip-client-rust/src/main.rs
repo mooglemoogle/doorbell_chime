@@ -481,3 +481,270 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         reconnect_delay = (reconnect_delay * 2).min(RECONNECT_MAX);
     }
 }
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // -----------------------------------------------------------------------
+    // Binary message builders
+    // -----------------------------------------------------------------------
+
+    fn make_frame_msg(ts_ms: u64, frame_num: u16, pixels: &[u8]) -> Vec<u8> {
+        let pixel_count = (pixels.len() / 3) as u16;
+        let mut data = vec![0u8; 13 + pixels.len()];
+        data[0] = MSG_FRAME;
+        data[1..5].copy_from_slice(&((ts_ms >> 32) as u32).to_be_bytes());
+        data[5..9].copy_from_slice(&(ts_ms as u32).to_be_bytes());
+        data[9..11].copy_from_slice(&frame_num.to_be_bytes());
+        data[11..13].copy_from_slice(&pixel_count.to_be_bytes());
+        data[13..].copy_from_slice(pixels);
+        data
+    }
+
+    fn make_frame_msg_rgbw(ts_ms: u64, pixels: &[u8]) -> Vec<u8> {
+        let pixel_count = (pixels.len() / 4) as u16;
+        let mut data = vec![0u8; 13 + pixels.len()];
+        data[0] = MSG_FRAME;
+        data[1..5].copy_from_slice(&((ts_ms >> 32) as u32).to_be_bytes());
+        data[5..9].copy_from_slice(&(ts_ms as u32).to_be_bytes());
+        data[9..11].copy_from_slice(&0u16.to_be_bytes());
+        data[11..13].copy_from_slice(&pixel_count.to_be_bytes());
+        data[13..].copy_from_slice(pixels);
+        data
+    }
+
+    fn make_sync_msg(ts_ms: u64, fps: u16) -> Vec<u8> {
+        let mut data = vec![0u8; 11];
+        data[0] = MSG_SYNC;
+        data[1..5].copy_from_slice(&((ts_ms >> 32) as u32).to_be_bytes());
+        data[5..9].copy_from_slice(&(ts_ms as u32).to_be_bytes());
+        data[9..11].copy_from_slice(&fps.to_be_bytes());
+        data
+    }
+
+    // -----------------------------------------------------------------------
+    // FrameBuffer
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn frame_buffer_starts_empty() {
+        let buf = FrameBuffer::new();
+        assert_eq!(buf.buffered_count(), 0);
+        assert_eq!(buf.fps, 30);
+    }
+
+    #[test]
+    fn get_frame_returns_none_when_empty() {
+        let mut buf = FrameBuffer::new();
+        assert!(buf.get_frame(1_000_000).is_none());
+    }
+
+    #[test]
+    fn get_frame_returns_frame_at_exact_timestamp() {
+        let mut buf = FrameBuffer::new();
+        buf.add_frame(1000, vec![255, 0, 0]);
+        assert_eq!(buf.get_frame(1000), Some(vec![255, 0, 0]));
+    }
+
+    #[test]
+    fn get_frame_returns_latest_at_or_before_now() {
+        let mut buf = FrameBuffer::new();
+        buf.add_frame(1000, vec![1]);
+        buf.add_frame(2000, vec![2]);
+        buf.add_frame(3000, vec![3]);
+        assert_eq!(buf.get_frame(2500), Some(vec![2]));
+    }
+
+    #[test]
+    fn get_frame_returns_none_for_future_frames() {
+        let mut buf = FrameBuffer::new();
+        buf.add_frame(9000, vec![99]);
+        assert!(buf.get_frame(5000).is_none());
+    }
+
+    #[test]
+    fn get_frame_removes_consumed_and_older_frames() {
+        let mut buf = FrameBuffer::new();
+        buf.add_frame(1000, vec![1]);
+        buf.add_frame(2000, vec![2]);
+        buf.add_frame(3000, vec![3]);
+        buf.get_frame(2000); // consumes 2000, removes 1000
+        assert_eq!(buf.buffered_count(), 1); // only 3000 remains
+    }
+
+    #[test]
+    fn get_frame_keeps_future_frames() {
+        let mut buf = FrameBuffer::new();
+        buf.add_frame(1000, vec![1]);
+        buf.add_frame(5000, vec![2]);
+        buf.get_frame(1000);
+        assert_eq!(buf.get_frame(5000), Some(vec![2]));
+    }
+
+    #[test]
+    fn get_frame_sets_last_frame() {
+        let mut buf = FrameBuffer::new();
+        buf.add_frame(100, vec![42, 43, 44]);
+        let frame = buf.get_frame(100);
+        assert!(frame.is_some());
+        assert_eq!(buf.last_frame, Some(vec![42, 43, 44]));
+    }
+
+    #[test]
+    fn sync_removes_frames_at_or_after_from_ms() {
+        let mut buf = FrameBuffer::new();
+        buf.add_frame(1000, vec![1]);
+        buf.add_frame(2000, vec![2]);
+        buf.add_frame(3000, vec![3]);
+        buf.sync(2000, 30);
+        assert_eq!(buf.buffered_count(), 1); // only 1000 remains
+        assert_eq!(buf.get_frame(1000), Some(vec![1]));
+    }
+
+    #[test]
+    fn sync_updates_fps() {
+        let mut buf = FrameBuffer::new();
+        buf.sync(0, 60);
+        assert_eq!(buf.fps, 60);
+    }
+
+    #[test]
+    fn sync_clears_all_frames_from_zero() {
+        let mut buf = FrameBuffer::new();
+        buf.add_frame(1000, vec![1]);
+        buf.add_frame(2000, vec![2]);
+        buf.sync(0, 30);
+        assert_eq!(buf.buffered_count(), 0);
+    }
+
+    #[test]
+    fn sync_keeps_frames_before_from_ms() {
+        let mut buf = FrameBuffer::new();
+        buf.add_frame(500, vec![1]);
+        buf.sync(1000, 30);
+        assert_eq!(buf.buffered_count(), 1);
+    }
+
+    #[test]
+    fn evict_drops_oldest_frames_when_over_fps_limit() {
+        let mut buf = FrameBuffer::new();
+        buf.fps = 3;
+        buf.add_frame(1000, vec![1]);
+        buf.add_frame(2000, vec![2]);
+        buf.add_frame(3000, vec![3]);
+        buf.add_frame(4000, vec![4]); // triggers eviction
+        assert_eq!(buf.buffered_count(), 3);
+        assert!(buf.get_frame(1000).is_none()); // oldest evicted
+    }
+
+    #[test]
+    fn evict_keeps_newest_frames() {
+        let mut buf = FrameBuffer::new();
+        buf.fps = 2;
+        buf.add_frame(1000, vec![1]);
+        buf.add_frame(2000, vec![2]);
+        buf.add_frame(3000, vec![3]);
+        assert_eq!(buf.get_frame(3000), Some(vec![3]));
+    }
+
+    // -----------------------------------------------------------------------
+    // parse_message
+    // -----------------------------------------------------------------------
+
+    #[test]
+    fn parse_message_empty_data_no_panic() {
+        let mut buf = FrameBuffer::new();
+        parse_message(&[], &mut buf);
+        assert_eq!(buf.buffered_count(), 0);
+    }
+
+    #[test]
+    fn parse_message_unknown_type_no_panic() {
+        let mut buf = FrameBuffer::new();
+        parse_message(&[0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], &mut buf);
+        assert_eq!(buf.buffered_count(), 0);
+    }
+
+    #[test]
+    fn parse_message_frame_too_short_no_panic() {
+        let mut buf = FrameBuffer::new();
+        parse_message(&[MSG_FRAME, 0, 0], &mut buf);
+        assert_eq!(buf.buffered_count(), 0);
+    }
+
+    #[test]
+    fn parse_message_valid_frame_adds_to_buffer() {
+        let mut buf = FrameBuffer::new();
+        let msg = make_frame_msg(1000, 0, &[255, 0, 0]);
+        parse_message(&msg, &mut buf);
+        assert_eq!(buf.buffered_count(), 1);
+    }
+
+    #[test]
+    fn parse_message_frame_decodes_timestamp_correctly() {
+        let mut buf = FrameBuffer::new();
+        let ts: u64 = 1_700_000_000_123;
+        let msg = make_frame_msg(ts, 0, &[1, 2, 3]);
+        parse_message(&msg, &mut buf);
+        assert_eq!(buf.get_frame(ts), Some(vec![1, 2, 3]));
+    }
+
+    #[test]
+    fn parse_message_frame_decodes_high_32_bit_timestamp() {
+        let mut buf = FrameBuffer::new();
+        let ts: u64 = 0x1_0000_0000; // non-zero high word
+        let msg = make_frame_msg(ts, 0, &[9, 8, 7]);
+        parse_message(&msg, &mut buf);
+        assert_eq!(buf.get_frame(ts), Some(vec![9, 8, 7]));
+    }
+
+    #[test]
+    fn parse_message_detects_bpp3_rgb() {
+        let mut buf = FrameBuffer::new();
+        let pixels = &[10u8, 20, 30]; // 1 pixel × 3 bytes
+        let msg = make_frame_msg(1000, 0, pixels);
+        parse_message(&msg, &mut buf);
+        assert_eq!(buf.get_frame(1000), Some(pixels.to_vec()));
+    }
+
+    #[test]
+    fn parse_message_detects_bpp4_rgbw() {
+        let mut buf = FrameBuffer::new();
+        let pixels = &[10u8, 20, 30, 40]; // 1 pixel × 4 bytes
+        let msg = make_frame_msg_rgbw(1000, pixels);
+        parse_message(&msg, &mut buf);
+        let frame = buf.get_frame(1000).unwrap();
+        assert_eq!(frame.len(), 4);
+    }
+
+    #[test]
+    fn parse_message_valid_sync_updates_fps() {
+        let mut buf = FrameBuffer::new();
+        let msg = make_sync_msg(0, 60);
+        parse_message(&msg, &mut buf);
+        assert_eq!(buf.fps, 60);
+    }
+
+    #[test]
+    fn parse_message_sync_removes_frames_at_or_after_timestamp() {
+        let mut buf = FrameBuffer::new();
+        buf.add_frame(1000, vec![1]);
+        buf.add_frame(2000, vec![2]);
+        buf.add_frame(3000, vec![3]);
+        let msg = make_sync_msg(2000, 30);
+        parse_message(&msg, &mut buf);
+        assert_eq!(buf.buffered_count(), 1); // only 1000 remains
+    }
+
+    #[test]
+    fn parse_message_sync_too_short_no_panic() {
+        let mut buf = FrameBuffer::new();
+        parse_message(&[MSG_SYNC, 0, 0], &mut buf);
+        assert_eq!(buf.fps, 30); // unchanged
+    }
+}
