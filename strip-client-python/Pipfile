@@ -11,6 +11,7 @@ adafruit-blinka = ">=8.0.0"
 adafruit-circuitpython-neopixel = ">=6.0.0"
 
 [dev-packages]
+pytest = "*"
 
 [requires]
 python_version = "3.13"
