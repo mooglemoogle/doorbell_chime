@@ -82,18 +82,33 @@ const ColorArrayControl: FC<{
     const arr = Array.isArray(value) ? value as number[][] : []
     const count = arr.length || schema.minItems || 2
     const canAdd = schema.maxItems == null || count < schema.maxItems
+    const canRemove = count > (schema.minItems ?? 1)
     return (
         <div css={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px' }}>
             {Array.from({ length: count }, (_, i) => (
-                <ColorControl
-                    key={i}
-                    value={arr[i] ?? [0, 0, 1]}
-                    onChange={v => {
-                        const next = [...arr]
-                        next[i] = v
-                        onChange(next)
-                    }}
-                />
+                <div key={i} css={{ position: 'relative', display: 'inline-flex' }}>
+                    <ColorControl
+                        value={arr[i] ?? [0, 0, 1]}
+                        onChange={v => {
+                            const next = [...arr]
+                            next[i] = v
+                            onChange(next)
+                        }}
+                    />
+                    {canRemove && (
+                        <button
+                            onClick={() => onChange(arr.filter((_, j) => j !== i))}
+                            css={{
+                                position: 'absolute', top: '-5px', right: '-5px',
+                                width: '14px', height: '14px', padding: 0,
+                                background: '#555', border: 'none', borderRadius: '50%',
+                                cursor: 'pointer', color: '#ccc', fontSize: '10px',
+                                lineHeight: '14px', textAlign: 'center',
+                                ':hover': { background: '#e06c75', color: '#fff' },
+                            }}
+                        >×</button>
+                    )}
+                </div>
             ))}
             {canAdd && (
                 <button
