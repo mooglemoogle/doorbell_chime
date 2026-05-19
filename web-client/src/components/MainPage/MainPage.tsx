@@ -15,6 +15,11 @@ export const MainPage: FC = () => {
             location: '/',
             icon: 'home',
         },
+        {
+            name: 'Playground',
+            location: '/playground',
+            icon: 'code',
+        },
     ];
 
     return (

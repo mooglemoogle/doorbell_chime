@@ -34,6 +34,7 @@ export class FrameGenerator {
     const frameNumber = this.frameCounter++
 
     for (const strip of this.registry.strips) {
+      if (this.manager.isDisabled(strip.stripId)) continue
       const connected = this.manager.getConnected().find(c => c.stripId === strip.stripId)
       if (!connected) continue
 

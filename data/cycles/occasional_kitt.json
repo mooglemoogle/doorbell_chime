@@ -8,8 +8,8 @@
                 "color": [0, 1, 1],
                 "speed": 4,
                 "fade_time": 2,
-                "width": 10,
-                "border": 30
+                "width": 5,
+                "border": 0
             }
         },
         {

@@ -67,6 +67,15 @@ export class StripRegistry {
     return this.strips.find(s => s.stripId === stripId)
   }
 
+  removeStrip(stripId: string): boolean {
+    if (!this.entryMap.has(stripId)) return false
+    const prevTotal = this.totalPixels
+    this.entryMap.delete(stripId)
+    this.recompute()
+    this.save()
+    return this.totalPixels !== prevTotal
+  }
+
   private recompute(): void {
     const entries = Array.from(this.entryMap.values())
     // Sort left-to-right by start.x, then start.y, then start.z

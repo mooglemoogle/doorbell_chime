@@ -50,7 +50,7 @@ export class Algorithm extends BaseAlgorithm {
     this.halfWidth = (settings['width'] as number) / 2
     this.color = settings['color'] as number[]
     this.border = (settings['border'] as number) ?? 0
-    this.effectSize = this.pixels.length - this.border * 2
+    this.effectSize = Math.max(0, this.pixels.length - this.border * 2)
     this.perSecond = (this.effectSize * 2) / this.speed
     this.fadePerSecond = 1.0 / (settings['fade_time'] as number)
   }

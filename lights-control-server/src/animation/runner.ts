@@ -23,7 +23,6 @@ export class AnimationRunner {
   private readonly transitionAlg: TransitionAlgorithm
   private curAlg: BaseAlgorithm
   private nextAlg: BaseAlgorithm
-  private lastCycleTime = Date.now()
   private lastChangeTime = Date.now()
   private nextCycleLength = Infinity
   private timer: Timer
@@ -171,11 +170,11 @@ export class AnimationRunner {
 
   private async tick(): Promise<void> {
     const now = Date.now()
-    const elapsed = (now - this.lastCycleTime) / 1000
+    const idealFrameMs = 1000 / this.timer.fps
     const sinceLastChange = (now - this.lastChangeTime) / 1000
 
     if (!this.isOff()) {
-      const done = this.curAlg.runCycle(elapsed * 1000, elapsed)
+      const done = this.curAlg.runCycle(idealFrameMs, idealFrameMs / 1000)
       this.pixels = this.curAlg.pixels
 
       await this.frameGenerator.sendFrame(this.pixels, this.status.getValue('brightness'), this.timer)
@@ -188,7 +187,5 @@ export class AnimationRunner {
         this.nextAlgorithm()
       }
     }
-
-    this.lastCycleTime = now
   }
 }

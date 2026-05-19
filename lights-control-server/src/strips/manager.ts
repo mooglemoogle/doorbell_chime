@@ -11,6 +11,7 @@ export interface ConnectedStrip {
 
 export class StripManager {
   private connections = new Map<string, ConnectedStrip>()
+  private disabledIds = new Set<string>()
 
   register(stripId: string, socket: WebSocket, meta: ResolvedStrip): void {
     this.connections.set(stripId, {
@@ -27,6 +28,16 @@ export class StripManager {
     this.connections.delete(stripId)
     console.log(`Strip disconnected: ${stripId}`)
   }
+
+  disconnect(stripId: string): void {
+    const conn = this.connections.get(stripId)
+    if (conn) conn.socket.close()
+    this.remove(stripId)
+  }
+
+  disable(stripId: string): void { this.disabledIds.add(stripId) }
+  enable(stripId: string): void { this.disabledIds.delete(stripId) }
+  isDisabled(stripId: string): boolean { return this.disabledIds.has(stripId) }
 
   updateStatus(stripId: string, bufferedFrames: number): void {
     const conn = this.connections.get(stripId)

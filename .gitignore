@@ -8,3 +8,4 @@ strip-client-rust/target
 lights-control-server/.yarn/**
 lights-control-server/dist/**
 web-client/dist/**
+web-client/.yarn/**
