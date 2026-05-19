@@ -13,6 +13,7 @@ export const getCycleNames = async (): Promise<string[]> => {
 export interface CycleEntryDetail {
     algorithm: string;
     seconds_in_cycle: number;
+    display_name?: string;
     options: Record<string, unknown>;
     algorithmConfig: AlgorithmConfig | null;
 }

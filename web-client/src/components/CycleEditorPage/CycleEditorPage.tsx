@@ -1,5 +1,5 @@
 import { FC, useEffect, useState } from 'react';
-import { Button, Card, Collapse, FormGroup, H2, HTMLSelect, Icon } from '@blueprintjs/core';
+import { Button, Card, Collapse, FormGroup, H2, HTMLSelect, Icon, InputGroup, NumericInput } from '@blueprintjs/core';
 import { useAtomValue, useSetAtom } from 'jotai';
 
 import { CycleNamesAtom, FetchCycleNamesAtom } from '@atoms/cycles';
@@ -11,6 +11,7 @@ export const CycleEditorPage: FC = () => {
     const cycleNames = useAtomValue(CycleNamesAtom);
 
     const [selectedName, setSelectedName] = useState('');
+    const [cycleName, setCycleName] = useState('');
     const [entries, setEntries] = useState<CycleEntryDetail[]>([]);
     const [detail, setDetail] = useState<CycleDetail | null>(null);
     const [openSet, setOpenSet] = useState<Set<number>>(new Set([0]));
@@ -32,6 +33,7 @@ export const CycleEditorPage: FC = () => {
         setSaveStatus('idle');
         fetchCycleDetail(selectedName).then(d => {
             setDetail(d);
+            setCycleName(d.name);
             setEntries(d.cycles);
             setOpenSet(new Set([0]));
         });
@@ -45,8 +47,8 @@ export const CycleEditorPage: FC = () => {
         });
     };
 
-    const handleOptionsChange = (index: number, options: Record<string, unknown>) => {
-        setEntries(prev => prev.map((e, i) => i === index ? { ...e, options } : e));
+    const handleEntryChange = (index: number, changes: Partial<CycleEntryDetail>) => {
+        setEntries(prev => prev.map((e, i) => i === index ? { ...e, ...changes } : e));
         setSaveStatus('idle');
     };
 
@@ -55,7 +57,7 @@ export const CycleEditorPage: FC = () => {
         setSaving(true);
         setSaveStatus('idle');
         try {
-            await saveCycle({ ...detail, cycles: entries });
+            await saveCycle({ ...detail, name: cycleName, cycles: entries });
             setSaveStatus('success');
         } catch {
             setSaveStatus('error');
@@ -67,7 +69,7 @@ export const CycleEditorPage: FC = () => {
     return (
         <div css={{ display: 'flex', flexDirection: 'column', padding: '20px', gap: '20px' }}>
             <H2>Cycle Editor</H2>
-            <div css={{ display: 'flex', alignItems: 'flex-end', gap: '12px' }}>
+            <div css={{ display: 'flex', alignItems: 'flex-end', gap: '12px', flexWrap: 'wrap' }}>
                 <FormGroup label="Cycle" css={{ marginBottom: 0 }}>
                     <HTMLSelect
                         value={selectedName}
@@ -77,6 +79,13 @@ export const CycleEditorPage: FC = () => {
                             <option key={name} value={name}>{name}</option>
                         ))}
                     </HTMLSelect>
+                </FormGroup>
+                <FormGroup label="Display Name" css={{ marginBottom: 0 }}>
+                    <InputGroup
+                        value={cycleName}
+                        disabled={!detail}
+                        onChange={e => { setCycleName(e.currentTarget.value); setSaveStatus('idle'); }}
+                    />
                 </FormGroup>
                 <Button
                     intent="primary"
@@ -96,7 +105,7 @@ export const CycleEditorPage: FC = () => {
             <div css={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {entries.map((entry, i) => {
                     const isOpen = openSet.has(i);
-                    const displayName = entry.algorithmConfig?.name ?? entry.algorithm;
+                    const fallbackName = entry.algorithmConfig?.name ?? entry.algorithm;
                     return (
                         <Card key={i} css={{ padding: 0 }}>
                             <div
@@ -104,20 +113,38 @@ export const CycleEditorPage: FC = () => {
                                 onClick={() => toggleOpen(i)}
                                 css={{
                                     display: 'flex',
-                                    justifyContent: 'space-between',
                                     alignItems: 'center',
-                                    padding: '10px 16px',
+                                    gap: '8px',
+                                    padding: '8px 16px',
                                     cursor: 'pointer',
                                     userSelect: 'none',
                                 }}
                             >
-                                <div css={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <Icon icon={isOpen ? 'chevron-down' : 'chevron-right'} />
-                                    <span css={{ fontWeight: 600 }}>{displayName}</span>
+                                <Icon icon={isOpen ? 'chevron-down' : 'chevron-right'} css={{ flexShrink: 0 }} />
+                                <InputGroup
+                                    value={entry.display_name ?? ''}
+                                    placeholder={fallbackName}
+                                    onClick={e => e.stopPropagation()}
+                                    onChange={e => handleEntryChange(i, {
+                                        display_name: e.currentTarget.value || undefined,
+                                    })}
+                                    css={{ flex: 1 }}
+                                />
+                                <div
+                                    css={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}
+                                    onClick={e => e.stopPropagation()}
+                                >
+                                    <NumericInput
+                                        value={entry.seconds_in_cycle}
+                                        min={1}
+                                        stepSize={10}
+                                        minorStepSize={1}
+                                        buttonPosition="none"
+                                        onValueChange={v => handleEntryChange(i, { seconds_in_cycle: v })}
+                                        css={{ width: '72px' }}
+                                    />
+                                    <span css={{ color: '#888', fontSize: '13px' }}>s</span>
                                 </div>
-                                <span css={{ color: '#888', fontSize: '13px' }}>
-                                    {entry.seconds_in_cycle}s
-                                </span>
                             </div>
                             <Collapse isOpen={isOpen}>
                                 <div css={{ padding: '0 16px 16px' }}>
@@ -125,7 +152,7 @@ export const CycleEditorPage: FC = () => {
                                         <SettingsEditor
                                             schema={entry.algorithmConfig.options}
                                             values={entry.options}
-                                            onChange={v => handleOptionsChange(i, v)}
+                                            onChange={v => handleEntryChange(i, { options: v })}
                                         />
                                     ) : (
                                         <span css={{ color: '#888', fontSize: '13px' }}>
