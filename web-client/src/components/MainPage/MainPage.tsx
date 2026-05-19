@@ -16,6 +16,11 @@ export const MainPage: FC = () => {
             icon: 'home',
         },
         {
+            name: 'Cycles',
+            location: '/cycles',
+            icon: 'refresh',
+        },
+        {
             name: 'Playground',
             location: '/playground',
             icon: 'code',
