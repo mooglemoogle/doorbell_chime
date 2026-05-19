@@ -135,11 +135,19 @@ const ObjectArrayControl: FC<{
     const properties = itemSchema.properties!
     const arr = Array.isArray(value) ? value as Record<string, unknown>[] : []
     const count = arr.length || schema.minItems || 1
+    const canRemove = count > (schema.minItems ?? 1)
+    const canAdd = schema.maxItems == null || count < schema.maxItems
 
     const updateItem = (i: number, key: string, v: unknown) => {
         const next = [...arr]
         next[i] = { ...next[i], [key]: v }
         onChange(next)
+    }
+
+    const addItem = () => {
+        const template = arr[arr.length - 1]
+            ?? Object.fromEntries(Object.entries(properties).map(([k, s]) => [k, s.default]))
+        onChange([...arr, { ...template }])
     }
 
     return (
@@ -161,9 +169,34 @@ const ObjectArrayControl: FC<{
                                 />
                             </div>
                         ))}
+                        {canRemove && (
+                            <button
+                                onClick={() => onChange(arr.filter((_, j) => j !== i))}
+                                css={{
+                                    marginLeft: 'auto', flexShrink: 0,
+                                    width: '20px', height: '20px', padding: 0,
+                                    background: 'none', border: '1px solid #555',
+                                    borderRadius: '50%', cursor: 'pointer', color: '#aaa',
+                                    fontSize: '12px', lineHeight: '18px', textAlign: 'center',
+                                    ':hover': { background: '#e06c75', borderColor: '#e06c75', color: '#fff' },
+                                }}
+                            >×</button>
+                        )}
                     </div>
                 )
             })}
+            {canAdd && (
+                <button
+                    onClick={addItem}
+                    css={{
+                        alignSelf: 'flex-start',
+                        padding: '2px 10px', background: 'none',
+                        border: '1px solid #555', borderRadius: '3px',
+                        cursor: 'pointer', color: '#aaa', fontSize: '13px',
+                        ':hover': { borderColor: '#aaa', color: '#fff' },
+                    }}
+                >+ Add</button>
+            )}
         </div>
     )
 }
