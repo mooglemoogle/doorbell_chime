@@ -98,6 +98,48 @@ const ColorArrayControl: FC<{
     )
 }
 
+const ObjectArrayControl: FC<{
+    schema: PropertySchema
+    value: unknown
+    onChange: (v: unknown) => void
+}> = ({ schema, value, onChange }) => {
+    const itemSchema = schema.items!
+    const properties = itemSchema.properties!
+    const arr = Array.isArray(value) ? value as Record<string, unknown>[] : []
+    const count = arr.length || schema.minItems || 1
+
+    const updateItem = (i: number, key: string, v: unknown) => {
+        const next = [...arr]
+        next[i] = { ...next[i], [key]: v }
+        onChange(next)
+    }
+
+    return (
+        <div css={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {Array.from({ length: count }, (_, i) => {
+                const item = arr[i] ?? {}
+                return (
+                    <div key={i} css={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                        {Object.entries(properties).map(([key, propSchema]) => (
+                            <div key={key} css={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span css={{ fontSize: '11px', color: '#888', whiteSpace: 'nowrap' }}>
+                                    {propSchema.title ?? key}
+                                </span>
+                                <PropertyControl
+                                    propKey={key}
+                                    schema={propSchema}
+                                    value={item[key]}
+                                    onChange={v => updateItem(i, key, v)}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                )
+            })}
+        </div>
+    )
+}
+
 function getMin(s: PropertySchema): number | undefined {
     return s.minimum ?? s.inclusiveMinimum
 }
@@ -155,6 +197,10 @@ const PropertyControl: FC<{
 
     if (schema.type === 'array' && schema.items?.type === 'color') {
         return <ColorArrayControl schema={schema} value={current} onChange={onChange} />
+    }
+
+    if (schema.type === 'array' && schema.items?.type === 'object' && schema.items.properties) {
+        return <ObjectArrayControl schema={schema} value={current} onChange={onChange} />
     }
 
     if (schema.type === 'array' && schema.items && NUMERIC_TYPES.has(schema.items.type)) {
