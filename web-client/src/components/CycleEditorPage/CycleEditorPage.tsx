@@ -1,6 +1,15 @@
 import { FC, useEffect, useState } from 'react';
 import { Button, Card, Collapse, FormGroup, H2, HTMLSelect, Icon, InputGroup, NumericInput } from '@blueprintjs/core';
 import { useAtomValue, useSetAtom } from 'jotai';
+import {
+    DndContext, DragEndEvent, PointerSensor, KeyboardSensor,
+    useSensor, useSensors, closestCenter,
+} from '@dnd-kit/core';
+import {
+    SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy,
+    useSortable, arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 import { CycleNamesAtom, FetchCycleNamesAtom } from '@atoms/cycles';
 import { SettingsEditor } from '@components/SettingsEditor/SettingsEditor';
@@ -11,6 +20,108 @@ const SYSTEM_ALGORITHMS = new Set(['off', 'transition', 'blank']);
 
 const formatKey = (key: string) =>
     key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
+// ---------------------------------------------------------------------------
+
+interface SortableEntryProps {
+    id: number;
+    entry: CycleEntryDetail;
+    isOpen: boolean;
+    canRemove: boolean;
+    onToggle: () => void;
+    onRemove: () => void;
+    onChange: (changes: Partial<CycleEntryDetail>) => void;
+}
+
+const SortableEntry: FC<SortableEntryProps> = ({ id, entry, isOpen, canRemove, onToggle, onRemove, onChange }) => {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+
+    const fallbackName = entry.algorithmConfig?.name ?? formatKey(entry.algorithm);
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
+        >
+            <Card css={{ padding: 0 }}>
+                <div
+                    role="button"
+                    onClick={onToggle}
+                    css={{
+                        display: 'flex', alignItems: 'center', gap: '8px',
+                        padding: '10px 16px', cursor: 'pointer', userSelect: 'none',
+                    }}
+                >
+                    <div
+                        {...attributes}
+                        {...listeners}
+                        onClick={e => e.stopPropagation()}
+                        css={{ cursor: 'grab', color: '#555', flexShrink: 0, ':hover': { color: '#aaa' }, ':active': { cursor: 'grabbing' } }}
+                    >
+                        <Icon icon="drag-handle-vertical" />
+                    </div>
+                    <Icon icon={isOpen ? 'chevron-down' : 'chevron-right'} />
+                    {entry.display_name
+                        ? <><span css={{ fontWeight: 600 }}>{entry.display_name}</span>
+                            <span css={{ color: '#888' }}>({fallbackName})</span></>
+                        : <span css={{ fontWeight: 600 }}>{fallbackName}</span>
+                    }
+                    <span css={{ color: '#888', fontSize: '13px', marginLeft: 'auto' }}>
+                        {entry.seconds_in_cycle}s
+                    </span>
+                    {canRemove && (
+                        <button
+                            onClick={e => { e.stopPropagation(); onRemove(); }}
+                            css={{
+                                marginLeft: '8px', width: '20px', height: '20px', padding: 0,
+                                flexShrink: 0, background: 'none', border: '1px solid #555',
+                                borderRadius: '50%', cursor: 'pointer', color: '#aaa',
+                                fontSize: '12px', lineHeight: '18px', textAlign: 'center',
+                                ':hover': { background: '#e06c75', borderColor: '#e06c75', color: '#fff' },
+                            }}
+                        >×</button>
+                    )}
+                </div>
+                <Collapse isOpen={isOpen}>
+                    <div css={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <div css={{ display: 'flex', gap: '12px', paddingTop: '4px' }}>
+                            <FormGroup label="Display Name" css={{ marginBottom: 0, flex: 1 }}>
+                                <InputGroup
+                                    value={entry.display_name ?? ''}
+                                    placeholder={fallbackName}
+                                    onChange={e => onChange({
+                                        display_name: e.currentTarget.value || undefined,
+                                    })}
+                                />
+                            </FormGroup>
+                            <FormGroup label="Duration (s)" css={{ marginBottom: 0 }}>
+                                <NumericInput
+                                    value={entry.seconds_in_cycle}
+                                    min={1}
+                                    stepSize={10}
+                                    minorStepSize={1}
+                                    buttonPosition="none"
+                                    onValueChange={v => onChange({ seconds_in_cycle: v })}
+                                />
+                            </FormGroup>
+                        </div>
+                        {entry.algorithmConfig ? (
+                            <SettingsEditor
+                                schema={entry.algorithmConfig.options}
+                                values={entry.options}
+                                onChange={v => onChange({ options: v })}
+                            />
+                        ) : (
+                            <span css={{ color: '#888', fontSize: '13px' }}>No configurable settings</span>
+                        )}
+                    </div>
+                </Collapse>
+            </Card>
+        </div>
+    );
+};
+
+// ---------------------------------------------------------------------------
 
 export const CycleEditorPage: FC = () => {
     const fetchCycleNames = useSetAtom(FetchCycleNamesAtom);
@@ -29,6 +140,11 @@ export const CycleEditorPage: FC = () => {
     const [newAlgorithmKey, setNewAlgorithmKey] = useState('');
     const [addingInProgress, setAddingInProgress] = useState(false);
 
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    );
+
     useEffect(() => {
         fetchCycleNames();
         getAlgorithmNames().then(keys => {
@@ -39,9 +155,7 @@ export const CycleEditorPage: FC = () => {
     }, [fetchCycleNames]);
 
     useEffect(() => {
-        if (cycleNames.length > 0 && !selectedName) {
-            setSelectedName(cycleNames[0]);
-        }
+        if (cycleNames.length > 0 && !selectedName) setSelectedName(cycleNames[0]);
     }, [cycleNames, selectedName]);
 
     useEffect(() => {
@@ -56,11 +170,25 @@ export const CycleEditorPage: FC = () => {
         });
     }, [selectedName]);
 
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (!over || active.id === over.id) return;
+        const oldIndex = active.id as number;
+        const newIndex = over.id as number;
+        setEntries(prev => arrayMove(prev, oldIndex, newIndex));
+        setOpenSet(prev => {
+            const reordered = arrayMove(Array.from({ length: entries.length }, (_, i) => i), oldIndex, newIndex);
+            const next = new Set<number>();
+            reordered.forEach((origIdx, newIdx) => { if (prev.has(origIdx)) next.add(newIdx); });
+            return next;
+        });
+        setSaveStatus('idle');
+    };
+
     const toggleOpen = (i: number) => {
         setOpenSet(prev => {
             const next = new Set(prev);
-            if (next.has(i)) next.delete(i);
-            else next.add(i);
+            if (next.has(i)) next.delete(i); else next.add(i);
             return next;
         });
     };
@@ -140,115 +268,48 @@ export const CycleEditorPage: FC = () => {
                 {saveStatus === 'success' && <span css={{ color: '#3dcc91', fontSize: '13px' }}>Saved</span>}
                 {saveStatus === 'error' && <span css={{ color: '#ff7373', fontSize: '13px' }}>Error saving</span>}
             </div>
-            <div css={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {entries.map((entry, i) => {
-                    const isOpen = openSet.has(i);
-                    const fallbackName = entry.algorithmConfig?.name ?? formatKey(entry.algorithm);
-                    return (
-                        <Card key={i} css={{ padding: 0 }}>
-                            <div
-                                role="button"
-                                onClick={() => toggleOpen(i)}
-                                css={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    padding: '10px 16px',
-                                    cursor: 'pointer',
-                                    userSelect: 'none',
-                                }}
-                            >
-                                <Icon icon={isOpen ? 'chevron-down' : 'chevron-right'} />
-                                {entry.display_name
-                                    ? <><span css={{ fontWeight: 600 }}>{entry.display_name}</span>
-                                        <span css={{ color: '#888' }}>({fallbackName})</span></>
-                                    : <span css={{ fontWeight: 600 }}>{fallbackName}</span>
-                                }
-                                <span css={{ color: '#888', fontSize: '13px', marginLeft: 'auto' }}>
-                                    {entry.seconds_in_cycle}s
-                                </span>
-                                {entries.length > 1 && (
-                                    <button
-                                        onClick={e => { e.stopPropagation(); handleRemoveEntry(i); }}
-                                        css={{
-                                            marginLeft: '8px', width: '20px', height: '20px', padding: 0,
-                                            flexShrink: 0, background: 'none', border: '1px solid #555',
-                                            borderRadius: '50%', cursor: 'pointer', color: '#aaa',
-                                            fontSize: '12px', lineHeight: '18px', textAlign: 'center',
-                                            ':hover': { background: '#e06c75', borderColor: '#e06c75', color: '#fff' },
-                                        }}
-                                    >×</button>
-                                )}
-                            </div>
-                            <Collapse isOpen={isOpen}>
-                                <div css={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                    <div css={{ display: 'flex', gap: '12px', paddingTop: '4px' }}>
-                                        <FormGroup label="Display Name" css={{ marginBottom: 0, flex: 1 }}>
-                                            <InputGroup
-                                                value={entry.display_name ?? ''}
-                                                placeholder={fallbackName}
-                                                onChange={e => handleEntryChange(i, {
-                                                    display_name: e.currentTarget.value || undefined,
-                                                })}
-                                            />
-                                        </FormGroup>
-                                        <FormGroup label="Duration (s)" css={{ marginBottom: 0 }}>
-                                            <NumericInput
-                                                value={entry.seconds_in_cycle}
-                                                min={1}
-                                                stepSize={10}
-                                                minorStepSize={1}
-                                                buttonPosition="none"
-                                                onValueChange={v => handleEntryChange(i, { seconds_in_cycle: v })}
-                                            />
-                                        </FormGroup>
-                                    </div>
-                                    {entry.algorithmConfig ? (
-                                        <SettingsEditor
-                                            schema={entry.algorithmConfig.options}
-                                            values={entry.options}
-                                            onChange={v => handleEntryChange(i, { options: v })}
-                                        />
-                                    ) : (
-                                        <span css={{ color: '#888', fontSize: '13px' }}>No configurable settings</span>
-                                    )}
-                                </div>
-                            </Collapse>
-                        </Card>
-                    );
-                })}
-
-                {addingEntry ? (
-                    <div css={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 4px' }}>
-                        <HTMLSelect
-                            value={newAlgorithmKey}
-                            onChange={e => setNewAlgorithmKey(e.currentTarget.value)}
-                        >
-                            {algorithmKeys.map(key => (
-                                <option key={key} value={key}>{formatKey(key)}</option>
-                            ))}
-                        </HTMLSelect>
-                        <Button
-                            intent="primary"
-                            loading={addingInProgress}
-                            onClick={handleAddEntry}
-                        >
-                            Add
-                        </Button>
-                        <Button variant="minimal" onClick={() => setAddingEntry(false)}>Cancel</Button>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={entries.map((_, i) => i)} strategy={verticalListSortingStrategy}>
+                    <div css={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {entries.map((entry, i) => (
+                            <SortableEntry
+                                key={i}
+                                id={i}
+                                entry={entry}
+                                isOpen={openSet.has(i)}
+                                canRemove={entries.length > 1}
+                                onToggle={() => toggleOpen(i)}
+                                onRemove={() => handleRemoveEntry(i)}
+                                onChange={changes => handleEntryChange(i, changes)}
+                            />
+                        ))}
                     </div>
-                ) : (
-                    <Button
-                        variant="minimal"
-                        icon="plus"
-                        disabled={!detail}
-                        onClick={() => setAddingEntry(true)}
-                        css={{ alignSelf: 'flex-start' }}
+                </SortableContext>
+            </DndContext>
+            {addingEntry ? (
+                <div css={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0' }}>
+                    <HTMLSelect
+                        value={newAlgorithmKey}
+                        onChange={e => setNewAlgorithmKey(e.currentTarget.value)}
                     >
-                        Add Algorithm
-                    </Button>
-                )}
-            </div>
+                        {algorithmKeys.map(key => (
+                            <option key={key} value={key}>{formatKey(key)}</option>
+                        ))}
+                    </HTMLSelect>
+                    <Button intent="primary" loading={addingInProgress} onClick={handleAddEntry}>Add</Button>
+                    <Button variant="minimal" onClick={() => setAddingEntry(false)}>Cancel</Button>
+                </div>
+            ) : (
+                <Button
+                    variant="minimal"
+                    icon="plus"
+                    disabled={!detail}
+                    onClick={() => setAddingEntry(true)}
+                    css={{ alignSelf: 'flex-start' }}
+                >
+                    Add Algorithm
+                </Button>
+            )}
         </div>
     );
 };
