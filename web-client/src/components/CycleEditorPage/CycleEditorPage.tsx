@@ -115,39 +115,46 @@ export const CycleEditorPage: FC = () => {
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: '8px',
-                                    padding: '8px 16px',
+                                    padding: '10px 16px',
                                     cursor: 'pointer',
                                     userSelect: 'none',
                                 }}
                             >
-                                <Icon icon={isOpen ? 'chevron-down' : 'chevron-right'} css={{ flexShrink: 0 }} />
-                                <InputGroup
-                                    value={entry.display_name ?? ''}
-                                    placeholder={fallbackName}
-                                    onClick={e => e.stopPropagation()}
-                                    onChange={e => handleEntryChange(i, {
-                                        display_name: e.currentTarget.value || undefined,
-                                    })}
-                                    css={{ flex: 1 }}
-                                />
-                                <div
-                                    css={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}
-                                    onClick={e => e.stopPropagation()}
-                                >
-                                    <NumericInput
-                                        value={entry.seconds_in_cycle}
-                                        min={1}
-                                        stepSize={10}
-                                        minorStepSize={1}
-                                        buttonPosition="none"
-                                        onValueChange={v => handleEntryChange(i, { seconds_in_cycle: v })}
-                                        css={{ width: '72px' }}
-                                    />
-                                    <span css={{ color: '#888', fontSize: '13px' }}>s</span>
-                                </div>
+                                <Icon icon={isOpen ? 'chevron-down' : 'chevron-right'} />
+                                <span css={{ fontWeight: 600 }}>
+                                    {entry.display_name || fallbackName}
+                                </span>
+                                <span css={{ color: '#888', fontSize: '13px', marginLeft: 'auto' }}>
+                                    {entry.seconds_in_cycle}s
+                                </span>
                             </div>
                             <Collapse isOpen={isOpen}>
-                                <div css={{ padding: '0 16px 16px' }}>
+                                <div css={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                    <div css={{ display: 'flex', gap: '12px', paddingTop: '4px' }}>
+                                        <FormGroup label="Display Name" css={{ marginBottom: 0, flex: 1 }}>
+                                            <InputGroup
+                                                value={entry.display_name ?? ''}
+                                                placeholder={fallbackName}
+                                                onChange={e => handleEntryChange(i, {
+                                                    display_name: e.currentTarget.value || undefined,
+                                                })}
+                                            />
+                                        </FormGroup>
+                                        <FormGroup label="Duration" css={{ marginBottom: 0 }}>
+                                            <div css={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <NumericInput
+                                                    value={entry.seconds_in_cycle}
+                                                    min={1}
+                                                    stepSize={10}
+                                                    minorStepSize={1}
+                                                    buttonPosition="none"
+                                                    onValueChange={v => handleEntryChange(i, { seconds_in_cycle: v })}
+                                                    css={{ width: '72px' }}
+                                                />
+                                                <span css={{ color: '#888', fontSize: '13px' }}>s</span>
+                                            </div>
+                                        </FormGroup>
+                                    </div>
                                     {entry.algorithmConfig ? (
                                         <SettingsEditor
                                             schema={entry.algorithmConfig.options}
