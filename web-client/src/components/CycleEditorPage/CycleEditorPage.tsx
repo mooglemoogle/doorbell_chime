@@ -14,7 +14,7 @@ export const CycleEditorPage: FC = () => {
     const [cycleName, setCycleName] = useState('');
     const [entries, setEntries] = useState<CycleEntryDetail[]>([]);
     const [detail, setDetail] = useState<CycleDetail | null>(null);
-    const [openSet, setOpenSet] = useState<Set<number>>(new Set([0]));
+    const [openSet, setOpenSet] = useState<Set>(new Set([0]));
     const [saving, setSaving] = useState(false);
     const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
@@ -42,13 +42,14 @@ export const CycleEditorPage: FC = () => {
     const toggleOpen = (i: number) => {
         setOpenSet(prev => {
             const next = new Set(prev);
-            if (next.has(i)) next.delete(i); else next.add(i);
+            if (next.has(i)) next.delete(i);
+            else next.add(i);
             return next;
         });
     };
 
-    const handleEntryChange = (index: number, changes: Partial<CycleEntryDetail>) => {
-        setEntries(prev => prev.map((e, i) => i === index ? { ...e, ...changes } : e));
+    const handleEntryChange = (index: number, changes: Partial) => {
+        setEntries(prev => prev.map((e, i) => (i === index ? { ...e, ...changes } : e)));
         setSaveStatus('idle');
     };
 
@@ -71,12 +72,11 @@ export const CycleEditorPage: FC = () => {
             <H2>Cycle Editor</H2>
             <div css={{ display: 'flex', alignItems: 'flex-end', gap: '12px', flexWrap: 'wrap' }}>
                 <FormGroup label="Cycle" css={{ marginBottom: 0 }}>
-                    <HTMLSelect
-                        value={selectedName}
-                        onChange={e => setSelectedName(e.currentTarget.value)}
-                    >
+                    <HTMLSelect value={selectedName} onChange={e => setSelectedName(e.currentTarget.value)}>
                         {cycleNames.map(name => (
-                            <option key={name} value={name}>{name}</option>
+                            <option key={name} value={name}>
+                                {name}
+                            </option>
                         ))}
                     </HTMLSelect>
                 </FormGroup>
@@ -84,23 +84,17 @@ export const CycleEditorPage: FC = () => {
                     <InputGroup
                         value={cycleName}
                         disabled={!detail}
-                        onChange={e => { setCycleName(e.currentTarget.value); setSaveStatus('idle'); }}
+                        onChange={e => {
+                            setCycleName(e.currentTarget.value);
+                            setSaveStatus('idle');
+                        }}
                     />
                 </FormGroup>
-                <Button
-                    intent="primary"
-                    loading={saving}
-                    disabled={!detail}
-                    onClick={handleSave}
-                >
+                <Button intent="primary" loading={saving} disabled={!detail} onClick={handleSave}>
                     Save
                 </Button>
-                {saveStatus === 'success' && (
-                    <span css={{ color: '#3dcc91', fontSize: '13px' }}>Saved</span>
-                )}
-                {saveStatus === 'error' && (
-                    <span css={{ color: '#ff7373', fontSize: '13px' }}>Error saving</span>
-                )}
+                {saveStatus === 'success' && <span css={{ color: '#3dcc91', fontSize: '13px' }}>Saved</span>}
+                {saveStatus === 'error' && <span css={{ color: '#ff7373', fontSize: '13px' }}>Error saving</span>}
             </div>
             <div css={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {entries.map((entry, i) => {
@@ -121,26 +115,39 @@ export const CycleEditorPage: FC = () => {
                                 }}
                             >
                                 <Icon icon={isOpen ? 'chevron-down' : 'chevron-right'} />
-                                <span css={{ fontWeight: 600 }}>
-                                    {entry.display_name || fallbackName}
-                                </span>
+                                {entry.display_name && (
+                                    <>
+                                        <span css={{ fontWeight: 600 }}>{entry.display_name}</span>
+                                        <span css={{ fontWeight: 400, color: '#888' }}>{`(${fallbackName})`}</span>
+                                    </>
+                                )}
+                                {!entry.display_name && <span css={{ fontWeight: 600 }}>{fallbackName}</span>}
                                 <span css={{ color: '#888', fontSize: '13px', marginLeft: 'auto' }}>
                                     {entry.seconds_in_cycle}s
                                 </span>
                             </div>
                             <Collapse isOpen={isOpen}>
-                                <div css={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                <div
+                                    css={{
+                                        padding: '0 16px 16px',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '16px',
+                                    }}
+                                >
                                     <div css={{ display: 'flex', gap: '12px', paddingTop: '4px' }}>
                                         <FormGroup label="Display Name" css={{ marginBottom: 0, flex: 1 }}>
                                             <InputGroup
                                                 value={entry.display_name ?? ''}
                                                 placeholder={fallbackName}
-                                                onChange={e => handleEntryChange(i, {
-                                                    display_name: e.currentTarget.value || undefined,
-                                                })}
+                                                onChange={e =>
+                                                    handleEntryChange(i, {
+                                                        display_name: e.currentTarget.value || undefined,
+                                                    })
+                                                }
                                             />
                                         </FormGroup>
-                                        <FormGroup label="Duration" css={{ marginBottom: 0 }}>
+                                        <FormGroup label="Duration (s)" css={{ marginBottom: 0 }}>
                                             <div css={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                 <NumericInput
                                                     value={entry.seconds_in_cycle}
@@ -149,9 +156,7 @@ export const CycleEditorPage: FC = () => {
                                                     minorStepSize={1}
                                                     buttonPosition="none"
                                                     onValueChange={v => handleEntryChange(i, { seconds_in_cycle: v })}
-                                                    css={{ width: '72px' }}
                                                 />
-                                                <span css={{ color: '#888', fontSize: '13px' }}>s</span>
                                             </div>
                                         </FormGroup>
                                     </div>
@@ -162,9 +167,7 @@ export const CycleEditorPage: FC = () => {
                                             onChange={v => handleEntryChange(i, { options: v })}
                                         />
                                     ) : (
-                                        <span css={{ color: '#888', fontSize: '13px' }}>
-                                            No configurable settings
-                                        </span>
+                                        <span css={{ color: '#888', fontSize: '13px' }}>No configurable settings</span>
                                     )}
                                 </div>
                             </Collapse>
