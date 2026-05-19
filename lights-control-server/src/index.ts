@@ -59,12 +59,12 @@ app.use(
     }),
 );
 
-app.use(routes(() => runner, manager));
+app.use(routes(() => runner, manager, registry, restartRunner));
 
 app.use(express.static(resolve(__dirname, '../../web-client/dist')));
 
 app.use('*', (_req, res) => {
-    res.status(StatusCodes.NOT_FOUND).send('404 Not Found');
+    res.sendFile(resolve(__dirname, '../../web-client/dist/index.html'));
 });
 
 app.listen(process.env.APP_PORT, () => {

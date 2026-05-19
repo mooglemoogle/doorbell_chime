@@ -19,7 +19,7 @@ export class Algorithm extends BaseAlgorithm {
     this.onTime = settings['onTime'] as number
     this.halfPulse = (settings['pulseTime'] as number) / 2.0
     this.lightsPerColor = settings['lightsPerColor'] as number
-    this.spaceBetween = settings['spaceBetween'] as number
+    this.spaceBetween = (settings['spaceBetween'] as number) ?? 0
     this.setColors()
   }
 

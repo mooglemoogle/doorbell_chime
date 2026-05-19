@@ -70,7 +70,7 @@ export const Sidebar: FC<SidebarProps> = ({ className, menuItems }) => {
             }}
         >
             {menuItems.map(item => (
-                <SidebarButton icon={item.icon} to={item.location} name={item.name} />
+                <SidebarButton key={item.location} icon={item.icon} to={item.location} name={item.name} />
             ))}
         </div>
     );

@@ -24,7 +24,7 @@ use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use tracing::{error, info, warn};
-use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -206,6 +206,8 @@ fn run_apply_loop(hw: HardwareConfig, buffer: Arc<Mutex<FrameBuffer>>, mock: boo
     let mut render_count: u32 = 0;
     let mut fps_window = Instant::now();
     let mut measured_fps: f32 = 0.0;
+    // Print immediately on first frame, then every 500 ms
+    let mut last_status = Instant::now() - Duration::from_millis(500);
 
     let mut next_frame = Instant::now();
 
@@ -220,15 +222,16 @@ fn run_apply_loop(hw: HardwareConfig, buffer: Arc<Mutex<FrameBuffer>>, mock: boo
         };
 
         if let Some(pixels) = frame {
-            if mock {
-                render_count += 1;
-                let elapsed = fps_window.elapsed();
-                if elapsed >= Duration::from_secs(1) {
-                    measured_fps = render_count as f32 / elapsed.as_secs_f32();
-                    render_count = 0;
-                    fps_window = Instant::now();
-                }
+            // Track FPS regardless of mode
+            render_count += 1;
+            let elapsed = fps_window.elapsed();
+            if elapsed >= Duration::from_secs(1) {
+                measured_fps = render_count as f32 / elapsed.as_secs_f32();
+                render_count = 0;
+                fps_window = Instant::now();
+            }
 
+            if mock {
                 let status = format!(
                     "fps: {measured_fps:.0}/{fps}  buf: {buffered}/{max_frames}\x1b[K\n"
                 );
@@ -274,6 +277,12 @@ fn run_apply_loop(hw: HardwareConfig, buffer: Arc<Mutex<FrameBuffer>>, mock: boo
 
                 #[cfg(not(feature = "hardware"))]
                 warn!("Hardware support not compiled in — rebuild with --features hardware, or set MOCK_WS2818=1.");
+
+                if last_status.elapsed() >= Duration::from_millis(500) {
+                    last_status = Instant::now();
+                    print!("fps: {measured_fps:.0}/{fps}  buf: {buffered}/{max_frames}\x1b[K\r");
+                    std::io::stdout().flush().ok();
+                }
             }
         }
 
@@ -377,6 +386,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
 
     tracing_subscriber::registry()
+        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("warn")))
         .with(fmt::layer().with_writer(std::io::stderr).with_target(false))
         .with(fmt::layer().with_ansi(false).with_writer(non_blocking).with_target(false))
         .init();
