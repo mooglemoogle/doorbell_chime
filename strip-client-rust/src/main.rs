@@ -73,6 +73,10 @@ struct FrameBuffer {
     frames: BTreeMap<u64, Vec<u8>>,
     last_frame: Option<Vec<u8>>,
     fps: u32,
+    dropped: u64,
+    avg_latency_ms: f64,
+    avg_frame_interval_ms: f64,
+    last_consumed_ts: Option<u64>,
 }
 
 impl FrameBuffer {
@@ -81,6 +85,10 @@ impl FrameBuffer {
             frames: BTreeMap::new(),
             last_frame: None,
             fps: 30,
+            dropped: 0,
+            avg_latency_ms: 0.0,
+            avg_frame_interval_ms: 0.0,
+            last_consumed_ts: None,
         }
     }
 
@@ -93,11 +101,21 @@ impl FrameBuffer {
         // Find the latest frame at or before now_ms
         let best_ts = self.frames.range(..=now_ms).next_back().map(|(&ts, _)| ts)?;
         let frame = self.frames.remove(&best_ts).unwrap();
-        // Drop older frames
+        // Drop older frames — they were never displayed
         let stale: Vec<u64> = self.frames.range(..best_ts).map(|(&k, _)| k).collect();
+        self.dropped += stale.len() as u64;
         for k in stale {
             self.frames.remove(&k);
         }
+        // EMA of how late we are consuming each frame (α = 0.1)
+        let latency = now_ms.saturating_sub(best_ts) as f64;
+        self.avg_latency_ms = self.avg_latency_ms * 0.9 + latency * 0.1;
+        // EMA of gap between consecutive frame target timestamps (α = 0.1)
+        if let Some(prev_ts) = self.last_consumed_ts {
+            let interval = best_ts.saturating_sub(prev_ts) as f64;
+            self.avg_frame_interval_ms = self.avg_frame_interval_ms * 0.9 + interval * 0.1;
+        }
+        self.last_consumed_ts = Some(best_ts);
         self.last_frame = Some(frame.clone());
         Some(frame)
     }
@@ -114,11 +132,16 @@ impl FrameBuffer {
         self.frames.len()
     }
 
+    fn next_frame_ts(&self) -> Option<u64> {
+        self.frames.keys().next().copied()
+    }
+
     fn evict(&mut self) {
         let max = self.fps as usize;
         while self.frames.len() > max {
             let oldest = *self.frames.keys().next().unwrap();
             self.frames.remove(&oldest);
+            self.dropped += 1;
         }
     }
 }
@@ -209,16 +232,15 @@ fn run_apply_loop(hw: HardwareConfig, buffer: Arc<Mutex<FrameBuffer>>, mock: boo
     // Print immediately on first frame, then every 500 ms
     let mut last_status = Instant::now() - Duration::from_millis(500);
 
-    let mut next_frame = Instant::now();
-
     loop {
-        let (frame, fps, buffered, max_frames) = {
+        let (frame, fps, buffered, max_frames, dropped, avg_lat, avg_interval, next_ts) = {
             let mut buf = buffer.lock().unwrap();
             let now_ms = now_ms();
             let f = buf.get_frame(now_ms).or_else(|| buf.last_frame.clone());
             let buffered = buf.buffered_count();
             let max = buf.fps as usize;
-            (f, buf.fps, buffered, max)
+            let next = buf.next_frame_ts();
+            (f, buf.fps, buffered, max, buf.dropped, buf.avg_latency_ms, buf.avg_frame_interval_ms, next)
         };
 
         if let Some(pixels) = frame {
@@ -233,7 +255,7 @@ fn run_apply_loop(hw: HardwareConfig, buffer: Arc<Mutex<FrameBuffer>>, mock: boo
 
             if mock {
                 let status = format!(
-                    "fps: {measured_fps:.0}/{fps}  buf: {buffered}/{max_frames}\x1b[K\n"
+                    "fps: {measured_fps:.0}/{fps}  buf: {buffered}/{max_frames}  drop: {dropped}  interval: {avg_interval:.1}ms  lat: {avg_lat:.1}ms\x1b[K\n"
                 );
                 let mut out = String::with_capacity(status.len() + num_pixels * 20);
                 out.push_str(&status);
@@ -280,19 +302,18 @@ fn run_apply_loop(hw: HardwareConfig, buffer: Arc<Mutex<FrameBuffer>>, mock: boo
 
                 if last_status.elapsed() >= Duration::from_millis(500) {
                     last_status = Instant::now();
-                    print!("fps: {measured_fps:.0}/{fps}  buf: {buffered}/{max_frames}\x1b[K\r");
+                    print!("fps: {measured_fps:.0}/{fps}  buf: {buffered}/{max_frames}  drop: {dropped}  interval: {avg_interval:.1}ms  lat: {avg_lat:.1}ms\x1b[K\r");
                     std::io::stdout().flush().ok();
                 }
             }
         }
 
-        next_frame += Duration::from_secs_f64(1.0 / fps.max(1) as f64);
-        let now = Instant::now();
-        if next_frame > now {
-            thread::sleep(next_frame - now);
-        } else {
-            // We're behind; reset the deadline to avoid a sleep-less spin
-            next_frame = now;
+        let now = now_ms();
+        let sleep_ms = next_ts
+            .map(|ts| ts.saturating_sub(now))
+            .unwrap_or(1000 / fps.max(1) as u64);
+        if sleep_ms > 0 {
+            thread::sleep(Duration::from_millis(sleep_ms));
         }
     }
 }

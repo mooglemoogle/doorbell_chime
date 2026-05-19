@@ -14,24 +14,21 @@ const LEAD_MS = 1000
 export class FrameGenerator {
   private readonly registry: StripRegistry
   private readonly manager: StripManager
-  private frameCounter = 0
-  private secondBase = 0
+  private frameIndex = 0
+  private frameOrigin = 0
+  private frameDurationMs = 1000 / 30
 
   constructor(registry: StripRegistry, manager: StripManager) {
     this.registry = registry
     this.manager = manager
   }
 
-  async sendFrame(pixels: Pixel[], brightness: number, timer: Timer): Promise<void> {
-    const targetTime = Date.now() + LEAD_MS
-
-    // Track frame number within the current second
-    const second = Math.floor(targetTime / 1000)
-    if (second !== this.secondBase) {
-      this.secondBase = second
-      this.frameCounter = 0
+  async sendFrame(pixels: Pixel[], brightness: number): Promise<void> {
+    if (this.frameOrigin === 0) {
+      this.frameOrigin = Date.now()
     }
-    const frameNumber = this.frameCounter++
+    const targetTime = this.frameOrigin + this.frameIndex * this.frameDurationMs + LEAD_MS
+    const frameNumber = this.frameIndex++
 
     for (const strip of this.registry.strips) {
       if (this.manager.isDisabled(strip.stripId)) continue
@@ -47,12 +44,20 @@ export class FrameGenerator {
     }
   }
 
+  sendSyncToStrip(stripId: string, timer: Timer): void {
+    const effectiveTime = Date.now() + 50
+    const msg = encodeSync(effectiveTime, timer.fps)
+    this.manager.send(stripId, msg)
+  }
+
   broadcastSync(timer: Timer): void {
     // Use a small lookahead so strips have time to process the sync before the next frame arrives
     const effectiveTime = Date.now() + 50
     const msg = encodeSync(effectiveTime, timer.fps)
     this.manager.broadcast(msg)
-    this.frameCounter = 0
+    this.frameOrigin = Date.now()
+    this.frameIndex = 0
+    this.frameDurationMs = 1000 / timer.fps
   }
 
   private encodeStripPixels(

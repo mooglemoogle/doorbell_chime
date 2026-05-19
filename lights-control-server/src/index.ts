@@ -45,7 +45,9 @@ function restartRunner(): void {
 
 // Start the WebSocket server for strip connections
 const wsPort = parseInt(process.env.WS_PORT ?? '3002', 10);
-createStripWebSocketServer(wsPort, registry, manager, restartRunner);
+createStripWebSocketServer(wsPort, registry, manager, restartRunner, (stripId) => {
+    frameGenerator.sendSyncToStrip(stripId, runner.timer);
+});
 
 startRunner();
 
