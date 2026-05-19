@@ -61,7 +61,7 @@ app.use(
     }),
 );
 
-app.use(routes(() => runner, manager, registry, restartRunner));
+app.use(routes(() => runner, manager, registry, restartRunner, cycles));
 
 app.use(express.static(resolve(__dirname, '../../web-client/dist')));
 
