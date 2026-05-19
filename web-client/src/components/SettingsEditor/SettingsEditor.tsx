@@ -81,8 +81,9 @@ const ColorArrayControl: FC<{
 }> = ({ schema, value, onChange }) => {
     const arr = Array.isArray(value) ? value as number[][] : []
     const count = arr.length || schema.minItems || 2
+    const canAdd = schema.maxItems == null || count < schema.maxItems
     return (
-        <div css={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+        <div css={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px' }}>
             {Array.from({ length: count }, (_, i) => (
                 <ColorControl
                     key={i}
@@ -94,6 +95,18 @@ const ColorArrayControl: FC<{
                     }}
                 />
             ))}
+            {canAdd && (
+                <button
+                    onClick={() => onChange([...arr, arr[arr.length - 1] ?? [0, 0, 1]])}
+                    css={{
+                        width: '28px', height: '28px', padding: 0,
+                        background: 'none', border: '1px solid #555',
+                        borderRadius: '3px', cursor: 'pointer', color: '#aaa',
+                        fontSize: '16px', lineHeight: 1,
+                        ':hover': { borderColor: '#aaa', color: '#fff' },
+                    }}
+                >+</button>
+            )}
         </div>
     )
 }
