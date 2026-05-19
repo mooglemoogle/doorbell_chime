@@ -7,19 +7,11 @@ export const config: AlgorithmConfig = {
     type: 'object',
     properties: {
       colors: {
+        title: 'Colors',
         type: 'array',
-        items: { $ref: '#/$defs/color' },
+        items: { type: 'color' },
         minItems: 2,
         maxItems: 2,
-        $defs: {
-          color: {
-            title: 'Color (HSV)',
-            type: 'array',
-            minItems: 3,
-            maxItems: 4,
-            items: { type: 'number', inclusiveMinimum: 0.0, inclusiveMaximum: 1.0 },
-          },
-        },
       },
       wavelength: { title: 'Wavelength', type: 'integer', default: 20 },
       speed: { title: 'Seconds per cycle (higher is slower)', type: 'float', default: 2 },

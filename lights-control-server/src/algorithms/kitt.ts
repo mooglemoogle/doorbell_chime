@@ -7,11 +7,8 @@ export const config: AlgorithmConfig = {
     type: 'object',
     properties: {
       color: {
-        title: 'Color (HSV)',
-        type: 'array',
-        minItems: 3,
-        maxItems: 4,
-        items: { type: 'number', inclusiveMinimum: 0.0, inclusiveMaximum: 1.0 },
+        title: 'Color',
+        type: 'color',
       },
       width: { title: 'Number of Pixels for Solid Light', type: 'float', default: 3 },
       speed: { title: 'Seconds per cycle (higher is slower)', type: 'float', default: 4 },

@@ -7,18 +7,10 @@ export const config: AlgorithmConfig = {
     type: 'object',
     properties: {
       colors: {
+        title: 'Colors',
         type: 'array',
-        items: { $ref: '#/$defs/color' },
+        items: { type: 'color' },
         minItems: 1,
-        $defs: {
-          color: {
-            title: 'Color (HSV)',
-            type: 'array',
-            minItems: 3,
-            maxItems: 4,
-            items: { type: 'number', inclusiveMinimum: 0.0, inclusiveMaximum: 1.0 },
-          },
-        },
       },
       freq: { title: 'Step Frequency (seconds)', type: 'number', default: 2, minimum: 0 },
     },

@@ -11,21 +11,12 @@ export const config: AlgorithmConfig = {
         items: {
           type: 'object',
           properties: {
-            color: { $ref: '#/$defs/color' },
+            color: { title: 'Color', type: 'color' },
             parts: { type: 'integer', default: 1, min: 1 },
           },
           required: ['color'],
         },
         minItems: 2,
-        $defs: {
-          color: {
-            title: 'Color (HSV)',
-            type: 'array',
-            minItems: 3,
-            maxItems: 4,
-            items: { type: 'number', inclusiveMinimum: 0.0, inclusiveMaximum: 1.0 },
-          },
-        },
       },
     },
   },

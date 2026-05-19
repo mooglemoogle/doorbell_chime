@@ -12,6 +12,92 @@ export interface SettingsEditorProps {
 
 const NUMERIC_TYPES = new Set(['number', 'float', 'integer'])
 
+// HSV (0–1 each) ↔ hex RGB helpers for the color picker
+function hsvToHex(h: number, s: number, v: number): string {
+    const i = Math.floor(h * 6)
+    const f = h * 6 - i
+    const p = v * (1 - s)
+    const q = v * (1 - f * s)
+    const t = v * (1 - (1 - f) * s)
+    const [r, g, b] = ((): [number, number, number] => {
+        switch (i % 6) {
+            case 0: return [v, t, p]
+            case 1: return [q, v, p]
+            case 2: return [p, v, t]
+            case 3: return [p, q, v]
+            case 4: return [t, p, v]
+            default: return [v, p, q]
+        }
+    })()
+    const hex = (c: number) => Math.round(c * 255).toString(16).padStart(2, '0')
+    return `#${hex(r)}${hex(g)}${hex(b)}`
+}
+
+function hexToHsv(hex: string): [number, number, number] {
+    const r = parseInt(hex.slice(1, 3), 16) / 255
+    const g = parseInt(hex.slice(3, 5), 16) / 255
+    const b = parseInt(hex.slice(5, 7), 16) / 255
+    const max = Math.max(r, g, b)
+    const min = Math.min(r, g, b)
+    const d = max - min
+    const s = max === 0 ? 0 : d / max
+    const v = max
+    let h = 0
+    if (d !== 0) {
+        switch (max) {
+            case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break
+            case g: h = ((b - r) / d + 2) / 6; break
+            case b: h = ((r - g) / d + 4) / 6; break
+        }
+    }
+    return [h, s, v]
+}
+
+const ColorControl: FC<{
+    value: unknown
+    onChange: (v: number[]) => void
+}> = ({ value, onChange }) => {
+    const arr = Array.isArray(value) ? value as number[] : [0, 0, 1]
+    const [h, s, v] = arr
+    const hex = hsvToHex(h ?? 0, s ?? 0, v ?? 1)
+    return (
+        <input
+            type="color"
+            value={hex}
+            onChange={e => {
+                const [nh, ns, nv] = hexToHsv(e.target.value)
+                // Preserve white channel if present
+                onChange(arr.length === 4 ? [nh, ns, nv, arr[3]] : [nh, ns, nv])
+            }}
+            css={{ width: '48px', height: '28px', padding: '2px', cursor: 'pointer', border: 'none', background: 'none' }}
+        />
+    )
+}
+
+const ColorArrayControl: FC<{
+    schema: PropertySchema
+    value: unknown
+    onChange: (v: unknown) => void
+}> = ({ schema, value, onChange }) => {
+    const arr = Array.isArray(value) ? value as number[][] : []
+    const count = arr.length || schema.minItems || 2
+    return (
+        <div css={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+            {Array.from({ length: count }, (_, i) => (
+                <ColorControl
+                    key={i}
+                    value={arr[i] ?? [0, 0, 1]}
+                    onChange={v => {
+                        const next = [...arr]
+                        next[i] = v
+                        onChange(next)
+                    }}
+                />
+            ))}
+        </div>
+    )
+}
+
 function getMin(s: PropertySchema): number | undefined {
     return s.minimum ?? s.inclusiveMinimum
 }
@@ -62,6 +148,14 @@ const PropertyControl: FC<{
     onChange: (v: unknown) => void
 }> = ({ propKey, schema, value, onChange }) => {
     const current = value ?? schema.default
+
+    if (schema.type === 'color') {
+        return <ColorControl value={current} onChange={v => onChange(v)} />
+    }
+
+    if (schema.type === 'array' && schema.items?.type === 'color') {
+        return <ColorArrayControl schema={schema} value={current} onChange={onChange} />
+    }
 
     if (schema.type === 'array' && schema.items && NUMERIC_TYPES.has(schema.items.type)) {
         return <ArrayControl schema={schema} value={current} onChange={onChange} />

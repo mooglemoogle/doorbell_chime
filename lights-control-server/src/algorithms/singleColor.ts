@@ -4,11 +4,8 @@ export const config: AlgorithmConfig = {
   name: 'Single Color',
   options: {
     color: {
-      title: 'Color (HSV)',
-      type: 'array',
-      minItems: 3,
-      maxItems: 4,
-      items: { type: 'number', inclusiveMinimum: 0.0, inclusiveMaximum: 1.0 },
+      title: 'Color',
+      type: 'color',
     },
   },
   refresh_rate: 2,

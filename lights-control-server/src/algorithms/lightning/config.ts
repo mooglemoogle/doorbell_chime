@@ -7,11 +7,8 @@ export const config: AlgorithmConfig = {
     type: 'object',
     properties: {
       color: {
-        title: 'Color (HSV)',
-        type: 'array',
-        minItems: 3,
-        maxItems: 4,
-        items: { type: 'number', inclusiveMinimum: 0.0, inclusiveMaximum: 1.0 },
+        title: 'Color',
+        type: 'color',
       },
       max_bolts: { type: 'number' },
       bolt_prob: { type: 'number', inclusiveMinimum: 0.0, inclusiveMaximum: 1.0 },
