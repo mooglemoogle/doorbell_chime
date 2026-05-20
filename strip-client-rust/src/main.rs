@@ -475,15 +475,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let exit_flag = Arc::new(AtomicBool::new(false));
     let connected = Arc::new(AtomicBool::new(false));
 
-    // SIGTERM: fade to black then exit
+    // SIGTERM / SIGINT (Ctrl-C): fade to black then exit
     {
         let ff = Arc::clone(&fade_flag);
         let ef = Arc::clone(&exit_flag);
+        let handler = move || {
+            ff.store(true, Ordering::Relaxed);
+            ef.store(true, Ordering::Relaxed);
+        };
         unsafe {
-            signal_hook::low_level::register(signal_hook::consts::SIGTERM, move || {
-                ff.store(true, Ordering::Relaxed);
-                ef.store(true, Ordering::Relaxed);
-            }).expect("Failed to register SIGTERM handler");
+            signal_hook::low_level::register(signal_hook::consts::SIGTERM, handler.clone())
+                .expect("Failed to register SIGTERM handler");
+            signal_hook::low_level::register(signal_hook::consts::SIGINT, handler)
+                .expect("Failed to register SIGINT handler");
         }
     }
 
