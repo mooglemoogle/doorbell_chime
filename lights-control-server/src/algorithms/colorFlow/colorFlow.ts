@@ -1,12 +1,6 @@
 import { BaseAlgorithm } from '../_meta/index'
+import { hsvToRgb } from '../_meta/helpers'
 import { config } from './config'
-
-function lerpHue(h1: number, h2: number, t: number): number {
-  let d = h2 - h1
-  if (d > 0.5) d -= 1
-  if (d < -0.5) d += 1
-  return ((h1 + d * t) + 1) % 1
-}
 
 export class Algorithm extends BaseAlgorithm {
   private readonly colors: number[][]
@@ -42,10 +36,12 @@ export class Algorithm extends BaseAlgorithm {
         this.pixels[i].set(c1[0], c1[1], c1[2])
       } else {
         const t = (posInSeg - this.width) / this.blendWidth
-        this.pixels[i].set(
-          lerpHue(c1[0], c2[0], t),
-          c1[1] + (c2[1] - c1[1]) * t,
-          c1[2] + (c2[2] - c1[2]) * t,
+        const [r1, g1, b1] = hsvToRgb(c1[0], c1[1], c1[2])
+        const [r2, g2, b2] = hsvToRgb(c2[0], c2[1], c2[2])
+        this.pixels[i].fromRgb(
+          r1 + (r2 - r1) * t,
+          g1 + (g2 - g1) * t,
+          b1 + (b2 - b1) * t,
         )
       }
     }
