@@ -138,10 +138,15 @@ const ObjectArrayControl: FC<{
     const canRemove = count > (schema.minItems ?? 1)
     const canAdd = schema.maxItems == null || count < schema.maxItems
 
+    const defaults = Object.fromEntries(Object.entries(properties).map(([k, s]) => [k, s.default]))
+
     const updateItem = (i: number, key: string, v: unknown) => {
-        const next = [...arr]
-        next[i] = { ...next[i], [key]: v }
-        onChange(next)
+        // Materialise the full array so sparse items and items with missing fields
+        // are written out with schema defaults — prevents fields that were never
+        // touched from being omitted on save.
+        const full = Array.from({ length: count }, (_, j) => ({ ...defaults, ...(arr[j] ?? {}) }))
+        full[i] = { ...full[i], [key]: v }
+        onChange(full)
     }
 
     const addItem = () => {
