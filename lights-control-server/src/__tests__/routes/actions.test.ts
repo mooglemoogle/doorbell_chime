@@ -6,6 +6,7 @@ jest.mock('../../logger', () => ({
 import express, { Router, Request, Response } from 'express'
 import actionsRouter from '../../routes/actions'
 import { AnimationRunner } from '../../animation/runner'
+import { Scheduler } from '../../scheduler/scheduler'
 
 function mockRes(): { status: jest.Mock; json: jest.Mock; send: jest.Mock } {
   const res = { status: jest.fn(), json: jest.fn(), send: jest.fn() }
@@ -27,6 +28,7 @@ function captureHandlers(router: Router): Map<string, (...args: any[]) => void> 
 
 describe('Actions routes', () => {
   let runner: jest.Mocked<AnimationRunner>
+  let scheduler: jest.Mocked<Scheduler>
   let handlers: Map<string, (...args: any[]) => void>
 
   beforeEach(() => {
@@ -40,9 +42,11 @@ describe('Actions routes', () => {
       nextAlgorithm: jest.fn(),
     } as unknown as jest.Mocked<AnimationRunner>
 
+    scheduler = { notifyManualCommand: jest.fn() } as unknown as jest.Mocked<Scheduler>
+
     const router = express.Router()
     handlers = captureHandlers(router)
-    actionsRouter(router, () => runner)
+    actionsRouter(router, () => runner, scheduler)
   })
 
   describe('GET /api/actions/get_status', () => {

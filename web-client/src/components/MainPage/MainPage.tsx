@@ -25,6 +25,11 @@ export const MainPage: FC = () => {
             location: '/playground',
             icon: 'code',
         },
+        {
+            name: 'Schedule',
+            location: '/schedule',
+            icon: 'calendar',
+        },
     ];
 
     return (
@@ -45,6 +50,7 @@ export const MainPage: FC = () => {
                 css={{
                     gridArea: 'mainArea',
                     padding: '20px',
+                    overflowY: 'auto',
                 }}
             >
                 {outlet}

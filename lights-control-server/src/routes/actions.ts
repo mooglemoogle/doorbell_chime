@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import { AnimationRunner } from '../animation/runner';
+import type { Scheduler } from '../scheduler/scheduler';
 import logger from '../logger';
 
 const SIMPLE_COMMANDS = ['on', 'off', 'next'] as const;
 type SimpleCommand = typeof SIMPLE_COMMANDS[number];
 
-export default (router: Router, getRunner: () => AnimationRunner) => {
+export default (router: Router, getRunner: () => AnimationRunner, scheduler: Scheduler) => {
     router.get('/api/actions/get_status', (_req, res) => {
         res.status(200).json({ accepted: true, response: getRunner().getStatus() });
     });
@@ -22,12 +23,14 @@ export default (router: Router, getRunner: () => AnimationRunner) => {
         }
         logger.info('Command: set_brightness', { brightness: value, ip: req.ip });
         getRunner().setBrightness(value);
+        scheduler.notifyManualCommand();
         res.status(202).json({ accepted: true });
     });
 
     router.post('/api/actions/set_cycle/:new_cycle', (req, res) => {
         logger.info('Command: set_cycle', { cycle: req.params.new_cycle, ip: req.ip });
         getRunner().setCycle(req.params.new_cycle);
+        scheduler.notifyManualCommand();
         res.status(202).json({ accepted: true });
     });
 
@@ -42,6 +45,7 @@ export default (router: Router, getRunner: () => AnimationRunner) => {
         if (command === 'on') runner.turnOn();
         else if (command === 'off') runner.turnOffCommand();
         else if (command === 'next') runner.nextAlgorithm();
+        scheduler.notifyManualCommand();
         res.status(202).json({ accepted: true });
     });
 };

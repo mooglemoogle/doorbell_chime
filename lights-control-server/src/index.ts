@@ -15,6 +15,8 @@ import { AnimationRunner } from './animation/runner';
 import { Status } from './status';
 import { Cycles } from './cycles';
 import { createStripWebSocketServer } from './websocket/server';
+import { SchedulerConfig } from './scheduler/config';
+import { Scheduler } from './scheduler/scheduler';
 
 // Build the dependency graph
 const status = new Status();
@@ -24,6 +26,9 @@ const manager = new StripManager();
 const frameGenerator = new FrameGenerator(registry, manager);
 
 let runner = new AnimationRunner(status, cycles, registry, frameGenerator);
+
+const schedulerConfig = new SchedulerConfig();
+const scheduler = new Scheduler(schedulerConfig, () => runner);
 
 function startRunner(): void {
     if (registry.totalPixels === 0) {
@@ -38,9 +43,11 @@ function startRunner(): void {
 
 function restartRunner(): void {
     logger.info('Strip layout changed — restarting animation runner');
+    scheduler.stop();
     runner.stop();
     runner = new AnimationRunner(status, cycles, registry, frameGenerator);
     startRunner();
+    scheduler.start();
 }
 
 // Start the WebSocket server for strip connections
@@ -50,6 +57,7 @@ createStripWebSocketServer(wsPort, registry, manager, restartRunner, (stripId) =
 });
 
 startRunner();
+scheduler.start();
 
 const app = express();
 
@@ -61,7 +69,7 @@ app.use(
     }),
 );
 
-app.use(routes(() => runner, manager, registry, restartRunner, cycles));
+app.use(routes(() => runner, manager, registry, restartRunner, cycles, schedulerConfig, scheduler));
 
 app.use(express.static(resolve(__dirname, '../../web-client/dist')));
 
