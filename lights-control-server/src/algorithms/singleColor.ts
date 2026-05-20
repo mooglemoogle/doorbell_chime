@@ -3,10 +3,15 @@ import { BaseAlgorithm, AlgorithmConfig } from './_meta/index'
 export const config: AlgorithmConfig = {
   name: 'Single Color',
   options: {
-    color: {
-      title: 'Color',
-      type: 'color',
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    type: 'object',
+    properties: {
+      color: {
+        title: 'Color',
+        type: 'color',
+      },
     },
+    default: { color: [0, 0, 1] },
   },
   refresh_rate: 2,
 }
