@@ -140,6 +140,10 @@ export const CycleEditorPage: FC = () => {
     const [newAlgorithmKey, setNewAlgorithmKey] = useState('');
     const [addingInProgress, setAddingInProgress] = useState(false);
 
+    const [isNewCycle, setIsNewCycle] = useState(false);
+    const [creatingCycle, setCreatingCycle] = useState(false);
+    const [newCycleName, setNewCycleName] = useState('');
+
     const sensors = useSensors(
         useSensor(PointerSensor),
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -230,6 +234,34 @@ export const CycleEditorPage: FC = () => {
         }
     };
 
+    const handleCreateCycle = () => {
+        const name = newCycleName.trim();
+        if (!name) return;
+        setDetail({ name, cycles: [] });
+        setCycleName(name);
+        setEntries([]);
+        setOpenSet(new Set());
+        setIsNewCycle(true);
+        setCreatingCycle(false);
+        setNewCycleName('');
+        setSaveStatus('idle');
+        setAddingEntry(false);
+    };
+
+    const handleDiscardNewCycle = () => {
+        setIsNewCycle(false);
+        setCreatingCycle(false);
+        setDetail(null);
+        if (selectedName) {
+            fetchCycleDetail(selectedName).then(d => {
+                setDetail(d);
+                setCycleName(d.name);
+                setEntries(d.cycles);
+                setOpenSet(new Set([0]));
+            });
+        }
+    };
+
     const handleSave = async () => {
         if (!detail) return;
         setSaving(true);
@@ -237,6 +269,11 @@ export const CycleEditorPage: FC = () => {
         try {
             await saveCycle({ ...detail, name: cycleName, cycles: entries });
             setSaveStatus('success');
+            if (isNewCycle) {
+                await fetchCycleNames();
+                setIsNewCycle(false);
+                setSelectedName(cycleName);
+            }
         } catch {
             setSaveStatus('error');
         } finally {
@@ -248,14 +285,43 @@ export const CycleEditorPage: FC = () => {
         <div css={{ display: 'flex', flexDirection: 'column', padding: '20px', gap: '20px' }}>
             <H2>Cycle Editor</H2>
             <div css={{ display: 'flex', alignItems: 'flex-end', gap: '12px', flexWrap: 'wrap' }}>
-                <FormGroup label="Cycle" css={{ marginBottom: 0 }}>
-                    <HTMLSelect value={selectedName} onChange={e => setSelectedName(e.currentTarget.value)}>
-                        {cycleNames.map(name => (
-                            <option key={name} value={name}>{name}</option>
-                        ))}
-                    </HTMLSelect>
-                </FormGroup>
-                <FormGroup label="Display Name" css={{ marginBottom: 0 }}>
+                {isNewCycle ? (
+                    <div css={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span css={{ fontSize: '13px', color: '#888' }}>New cycle</span>
+                        <Button variant="minimal" onClick={handleDiscardNewCycle}>Discard</Button>
+                    </div>
+                ) : creatingCycle ? (
+                    <FormGroup label="New Cycle Name" css={{ marginBottom: 0 }}>
+                        <div css={{ display: 'flex', gap: '6px' }}>
+                            <InputGroup
+                                value={newCycleName}
+                                placeholder="Cycle name…"
+                                autoFocus
+                                onChange={e => setNewCycleName(e.currentTarget.value)}
+                                onKeyDown={e => {
+                                    if (e.key === 'Enter') handleCreateCycle();
+                                    if (e.key === 'Escape') setCreatingCycle(false);
+                                }}
+                            />
+                            <Button intent="primary" disabled={!newCycleName.trim()} onClick={handleCreateCycle}>
+                                Create
+                            </Button>
+                            <Button variant="minimal" onClick={() => setCreatingCycle(false)}>Cancel</Button>
+                        </div>
+                    </FormGroup>
+                ) : (
+                    <FormGroup label="Cycle" css={{ marginBottom: 0 }}>
+                        <div css={{ display: 'flex', gap: '6px' }}>
+                            <HTMLSelect value={selectedName} onChange={e => setSelectedName(e.currentTarget.value)}>
+                                {cycleNames.map(name => (
+                                    <option key={name} value={name}>{name}</option>
+                                ))}
+                            </HTMLSelect>
+                            <Button icon="plus" onClick={() => setCreatingCycle(true)}>New</Button>
+                        </div>
+                    </FormGroup>
+                )}
+                <FormGroup label="Name" css={{ marginBottom: 0 }}>
                     <InputGroup
                         value={cycleName}
                         disabled={!detail}
