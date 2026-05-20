@@ -19,6 +19,8 @@ use std::fs;
 use std::io::Write as _;
 use std::net::TcpStream;
 use std::path::PathBuf;
+use std::process;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -77,6 +79,7 @@ struct FrameBuffer {
     avg_latency_ms: f64,
     avg_frame_interval_ms: f64,
     last_consumed_ts: Option<u64>,
+    last_frame_added: Instant,
 }
 
 impl FrameBuffer {
@@ -89,10 +92,12 @@ impl FrameBuffer {
             avg_latency_ms: 0.0,
             avg_frame_interval_ms: 0.0,
             last_consumed_ts: None,
+            last_frame_added: Instant::now(),
         }
     }
 
     fn add_frame(&mut self, timestamp_ms: u64, pixels: Vec<u8>) {
+        self.last_frame_added = Instant::now();
         self.frames.insert(timestamp_ms, pixels);
         self.evict();
     }
@@ -183,7 +188,17 @@ fn term_color(r: u8, g: u8, b: u8) -> String {
 // Apply loop (runs in its own thread, owns the WS281x controller)
 // ---------------------------------------------------------------------------
 
-fn run_apply_loop(hw: HardwareConfig, buffer: Arc<Mutex<FrameBuffer>>, mock: bool) {
+const FADE_SECS: f32 = 1.5;
+const BUFFER_TIMEOUT_SECS: u64 = 30;
+
+fn run_apply_loop(
+    hw: HardwareConfig,
+    buffer: Arc<Mutex<FrameBuffer>>,
+    fade_flag: Arc<AtomicBool>,
+    exit_flag: Arc<AtomicBool>,
+    connected: Arc<AtomicBool>,
+    mock: bool,
+) {
     let num_pixels = (hw.index_end - hw.index_start).unsigned_abs() as usize + 1;
     let skip: HashSet<i32> = hw.skip.iter().copied().collect();
     let reversed = hw.index_end < hw.index_start;
@@ -229,22 +244,55 @@ fn run_apply_loop(hw: HardwareConfig, buffer: Arc<Mutex<FrameBuffer>>, mock: boo
     let mut render_count: u32 = 0;
     let mut fps_window = Instant::now();
     let mut measured_fps: f32 = 0.0;
-    // Print immediately on first frame, then every 500 ms
     let mut last_status = Instant::now() - Duration::from_millis(500);
 
+    let mut fading = false;
+    let mut fade: f32 = 1.0;
+    // Start with black so a fade-from always has a valid base
+    let mut last_rendered: Vec<u8> = vec![0u8; num_pixels * bpp];
+
     loop {
-        let (frame, fps, buffered, max_frames, dropped, avg_lat, avg_interval, next_ts) = {
+        let (frame, has_fresh, fps, buffered, max_frames, dropped, avg_lat, avg_interval, next_ts, stale_secs) = {
             let mut buf = buffer.lock().unwrap();
             let now_ms = now_ms();
-            let f = buf.get_frame(now_ms).or_else(|| buf.last_frame.clone());
+            let fresh = buf.get_frame(now_ms);
+            let has_fresh = fresh.is_some();
+            let f = fresh.or_else(|| buf.last_frame.clone());
             let buffered = buf.buffered_count();
             let max = buf.fps as usize;
             let next = buf.next_frame_ts();
-            (f, buf.fps, buffered, max, buf.dropped, buf.avg_latency_ms, buf.avg_frame_interval_ms, next)
+            let stale = buf.last_frame_added.elapsed().as_secs();
+            (f, has_fresh, buf.fps, buffered, max, buf.dropped, buf.avg_latency_ms, buf.avg_frame_interval_ms, next, stale)
         };
 
-        if let Some(pixels) = frame {
-            // Track FPS regardless of mode
+        // --- Fade state machine ---
+        let ext_fade = fade_flag.load(Ordering::Relaxed);
+        let timeout_fade = connected.load(Ordering::Relaxed) && stale_secs > BUFFER_TIMEOUT_SECS;
+
+        if !fading && (ext_fade || timeout_fade) {
+            fading = true;
+            fade = 1.0;
+            info!("Starting fade to black (ext={ext_fade} timeout={timeout_fade})");
+        }
+        // Resume when all triggers are clear and a fresh buffer frame has arrived
+        if fading && !ext_fade && !timeout_fade && has_fresh {
+            fading = false;
+            fade = 1.0;
+            info!("Resuming from fade");
+        }
+
+        // --- Build pixels to render ---
+        let pixels_opt: Option<Vec<u8>> = if fading {
+            let step = 1.0 / (fps.max(1) as f32 * FADE_SECS);
+            fade = (fade - step).max(0.0);
+            Some(last_rendered.iter().map(|&v| (v as f32 * fade) as u8).collect())
+        } else {
+            frame
+        };
+
+        if let Some(ref pixels) = pixels_opt {
+            last_rendered = pixels.clone();
+
             render_count += 1;
             let elapsed = fps_window.elapsed();
             if elapsed >= Duration::from_secs(1) {
@@ -266,7 +314,6 @@ fn run_apply_loop(hw: HardwareConfig, buffer: Arc<Mutex<FrameBuffer>>, mock: boo
                     let b = pixels.get(src + 2).copied().unwrap_or(0);
                     out.push_str(&term_color(r, g, b));
                 }
-                // Move cursor back up to overwrite both lines next frame
                 out.push_str("\x1b[K\x1b[1A\r");
                 print!("{out}");
                 std::io::stdout().flush().ok();
@@ -288,8 +335,6 @@ fn run_apply_loop(hw: HardwareConfig, buffer: Arc<Mutex<FrameBuffer>>, mock: boo
                         let r = pixels.get(src).copied().unwrap_or(0);
                         let g = pixels.get(src + 1).copied().unwrap_or(0);
                         let b = pixels.get(src + 2).copied().unwrap_or(0);
-                        // RawColor = [u8; 4] is little-endian bytes of uint32_t 0x00RRGGBB,
-                        // so byte order is [B, G, R, W]. StripType handles wire-order reordering.
                         leds[i] = [b, g, r, 0];
                     }
                     if let Err(e) = ctrl.render() {
@@ -308,10 +353,21 @@ fn run_apply_loop(hw: HardwareConfig, buffer: Arc<Mutex<FrameBuffer>>, mock: boo
             }
         }
 
+        // Exit cleanly after SIGTERM fade completes
+        if fading && fade == 0.0 && exit_flag.load(Ordering::Relaxed) {
+            info!("Fade complete, exiting on SIGTERM");
+            process::exit(0);
+        }
+
         let now = now_ms();
-        let sleep_ms = next_ts
-            .map(|ts| ts.saturating_sub(now))
-            .unwrap_or(1000 / fps.max(1) as u64);
+        let sleep_ms = if fading {
+            // Drive fade at configured FPS regardless of buffer state
+            1000 / fps.max(1) as u64
+        } else {
+            next_ts
+                .map(|ts| ts.saturating_sub(now))
+                .unwrap_or(1000 / fps.max(1) as u64)
+        };
         if sleep_ms > 0 {
             thread::sleep(Duration::from_millis(sleep_ms));
         }
@@ -415,12 +471,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mock = env::var("MOCK_WS2818").map(|v| v == "1").unwrap_or(false);
 
     let buffer: Arc<Mutex<FrameBuffer>> = Arc::new(Mutex::new(FrameBuffer::new()));
+    let fade_flag = Arc::new(AtomicBool::new(false));
+    let exit_flag = Arc::new(AtomicBool::new(false));
+    let connected = Arc::new(AtomicBool::new(false));
+
+    // SIGTERM: fade to black then exit
+    {
+        let ff = Arc::clone(&fade_flag);
+        let ef = Arc::clone(&exit_flag);
+        unsafe {
+            signal_hook::low_level::register(signal_hook::consts::SIGTERM, move || {
+                ff.store(true, Ordering::Relaxed);
+                ef.store(true, Ordering::Relaxed);
+            }).expect("Failed to register SIGTERM handler");
+        }
+    }
 
     // Start apply loop in background thread
     {
         let hw = config.hardware.clone();
         let buf = Arc::clone(&buffer);
-        thread::spawn(move || run_apply_loop(hw, buf, mock));
+        let ff = Arc::clone(&fade_flag);
+        let ef = Arc::clone(&exit_flag);
+        let conn = Arc::clone(&connected);
+        thread::spawn(move || run_apply_loop(hw, buf, ff, ef, conn, mock));
     }
 
     // WebSocket connection loop with exponential backoff
@@ -451,6 +525,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Ok((mut socket, _)) => {
                     info!("Connected to server");
                     reconnect_delay = Duration::from_secs(1);
+                    connected.store(true, Ordering::Relaxed);
+                    fade_flag.store(false, Ordering::Relaxed);
 
                     // Register this strip with the server
                     let register = json!({
@@ -503,6 +579,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
 
                     info!("Disconnected from server");
+                    connected.store(false, Ordering::Relaxed);
+                    fade_flag.store(true, Ordering::Relaxed);
                 }
             },
         }
