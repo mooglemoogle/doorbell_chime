@@ -14,11 +14,9 @@ This project controls LED light strips on Raspberry Pis and provides a web UI to
                           │  - HTTP API for commands             │
                           └──────────────────────────────────────┘
                                          │ WebSocket (port 3002)
-                          ┌──────────────┼──────────────┐
-                          ▼              ▼              ▼
-                   strip-client-ts strip-client-  strip-client-
-                   (TypeScript)     python         rust
-                   (Pi hardware)  (Pi hardware)  (Pi hardware)
+                                         ▼
+                                 strip-client-rust
+                                 (Pi hardware/Rust)
 ```
 
 Strip clients connect to the server, register themselves, and receive binary frame messages to drive their LED hardware.
@@ -27,12 +25,10 @@ Strip clients connect to the server, register themselves, and receive binary fra
 
 | Directory | Language | Purpose |
 |---|---|---|
-| `lights-control-server/` | TypeScript/Node | Central controller — runs algorithms, serves HTTP API, broadcasts frames |
+| `lights-control-server/` | TypeScript/Bun | Central controller — runs algorithms, serves HTTP API, broadcasts frames |
 | `web-client/` | TypeScript/React | Web UI (Blueprint.js, Emotion CSS, Jotai state) |
 | `data/` | JSON | Shared data — cycle definitions, strip configs |
 | `lights-cli/` | Go | CLI for sending commands (needs update: still uses ZMQ, see below) |
-| `strip-client-ts/` | TypeScript/Node | WebSocket strip client — drives hardware via piixel |
-| `strip-client-python/` | Python | WebSocket strip client — drives hardware via neopixel |
 | `strip-client-rust/` | Rust | WebSocket strip client — drives hardware via rpi_ws281x |
 
 ## Running Things
@@ -40,41 +36,27 @@ Strip clients connect to the server, register themselves, and receive binary fra
 ### Web server (the controller)
 ```sh
 cd lights-control-server
-yarn
-yarn start        # watch mode (ts-node)
+bun install
+bun start        # watch mode
 ```
 
 ### Web client
 ```sh
 cd web-client
-yarn
-yarn dev          # webpack watch
-# yarn build      # production build → web-client/dist/ (served by server)
+bun install
+bun dev          # webpack watch
+# bun run build  # production build → web-client/dist/ (served by server)
 ```
 
-### Strip clients — pick one per Pi
+### Strip client
 
-**TypeScript:**
-```sh
-cd strip-client-ts && npm install
-npm start                    # production
-MOCK_PIIXEL=1 npm start      # mock terminal output
-```
-
-**Python:**
-```sh
-cd strip-client-python && pipenv install
-pipenv run python strip_client.py
-MOCK_NEOPIXEL=1 pipenv run python strip_client.py
-```
-
-**Rust (mock mode):**
+**Mock mode (no hardware):**
 ```sh
 cd strip-client-rust
 MOCK_WS2818=1 cargo run
 ```
 
-**Rust (build for Pi):**
+**Build for Pi:**
 ```sh
 cd strip-client-rust
 ./build-pi.sh               # requires OrbStack or Docker Desktop
@@ -83,7 +65,7 @@ scp strip-client-pi pi@raspberrypi.local:~/
 
 ## HTTP Command API
 
-`web/server` exposes commands at `/api/actions/*`:
+`lights-control-server` exposes commands at `/api/actions/*`:
 
 | Method | Path | Notes |
 |---|---|---|
@@ -119,7 +101,7 @@ Each file defines a named cycle of algorithms:
 ### `~/.local/lights-control/strips_config.json` (auto-generated when strips connect)
 Array of strip entries persisted by the server so layout survives restarts.
 
-### `~/.local/lights-control/strip_config.json` (one per strip client)
+### `~/.local/lights-control/strip_config.json` (strip client config)
 ```json
 {
   "stripId": "my-strip",
@@ -129,7 +111,7 @@ Array of strip entries persisted by the server so layout survives restarts.
 }
 ```
 
-Override any config path with the `STRIP_CONFIG` environment variable.
+Override any config path with the `STRIP_CONFIG` environment variable. On first run without a config file, an interactive setup wizard prompts for these values.
 
 ## Adding a New Algorithm (`lights-control-server`)
 
@@ -161,7 +143,7 @@ class Algorithm extends BaseAlgorithm {
 
 ## lights-control-server Key Notes
 
-- Runtime: **Node.js** with `ts-node` / `tsx`
+- Runtime: **Bun**
 - `src/animation/runner.ts`: FPS-locked animation loop — runs algorithms, calls `FrameGenerator` each frame
 - `src/animation/frameGenerator.ts`: Converts `Pixel[]` (HSV→RGB) to binary frame messages, broadcasts to all registered strip clients
 - `src/websocket/server.ts`: WebSocket server — strip clients register here and receive binary frames
@@ -174,4 +156,4 @@ class Algorithm extends BaseAlgorithm {
 - Built with React 18, Blueprint.js (icons/components), Emotion (CSS-in-JS), Jotai (state), React Router
 - Polls `get_status` and `get_cycles` every 30 seconds
 - API base: `/api/actions/*`
-- Build: `yarn build` outputs to `web-client/dist/`, served statically by the Express server
+- Build: `bun run build` outputs to `web-client/dist/`, served statically by the Express server

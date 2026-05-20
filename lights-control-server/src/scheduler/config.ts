@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
-import { homedir } from 'os'
 import { join, dirname } from 'path'
+import { DATA_DIR } from '../dataDir'
 import type { ScheduleConfigProperties } from './types'
 
 const defaultConfig: ScheduleConfigProperties = {
@@ -16,7 +16,7 @@ export class SchedulerConfig {
     private readonly filePath: string
     private debounceTimer: ReturnType<typeof setTimeout> | null = null
 
-    constructor(filePath = join(homedir(), '.local', 'lights-control', 'schedule.json')) {
+    constructor(filePath = join(DATA_DIR, 'schedule.json')) {
         this.filePath = filePath
         mkdirSync(dirname(this.filePath), { recursive: true })
         this.properties = this.load()

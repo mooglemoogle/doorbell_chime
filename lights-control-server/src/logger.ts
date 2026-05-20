@@ -1,10 +1,10 @@
 import { createLogger, format, transports } from 'winston'
 import DailyRotateFile from 'winston-daily-rotate-file'
 import { mkdirSync } from 'fs'
-import { resolve } from 'path'
-import { homedir } from 'os'
+import { join } from 'path'
+import { DATA_DIR } from './dataDir'
 
-const LOG_DIR = resolve(homedir(), '.local', 'lights-control', 'logs')
+const LOG_DIR = join(DATA_DIR, 'logs')
 mkdirSync(LOG_DIR, { recursive: true })
 
 const consoleFormat = format.combine(

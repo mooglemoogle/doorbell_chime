@@ -1,7 +1,7 @@
 import { readdirSync, existsSync, statSync, mkdirSync, writeFileSync, copyFileSync } from 'fs'
 import { join, resolve } from 'path'
-import { homedir } from 'os'
 import { Cycle, CycleEntry } from './cycle'
+import { DATA_DIR } from './dataDir'
 
 export class Cycles {
   cycles: Cycle[] = []
@@ -13,7 +13,7 @@ export class Cycles {
 
   constructor(
     cycleDirectory = './cycles',
-    localDataDir = join(homedir(), '.local', 'lights-control'),
+    localDataDir = DATA_DIR,
   ) {
     this.sourceDir = resolve(cycleDirectory)
     this.defaultCyclesDir = join(localDataDir, 'default_cycles')

@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { resolve, join, dirname } from 'path'
-import { homedir } from 'os'
+import { DATA_DIR } from '../dataDir'
 
 export interface PhysicalLocation {
   x: number
@@ -33,7 +33,7 @@ export class StripRegistry {
   strips: ResolvedStrip[] = []
   totalPixels = 0
 
-  constructor(savePath = join(homedir(), '.local', 'lights-control', 'strips_config.json')) {
+  constructor(savePath = join(DATA_DIR, 'strips_config.json')) {
     this.savePath = savePath
     mkdirSync(dirname(savePath), { recursive: true })
     if (existsSync(savePath)) {

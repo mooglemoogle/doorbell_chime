@@ -1,0 +1,21 @@
+services:
+  server:
+    build: .
+    ports:
+      - "8080:8080"
+      - "3002:3002"
+    volumes:
+      - lights_data:/data/lights-control
+    environment:
+      APP_PORT: "8080"
+      WS_PORT: "3002"
+      LIGHTS_DATA_DIR: /data/lights-control
+    restart: unless-stopped
+
+volumes:
+  lights_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${HOME}/.local/lights-control

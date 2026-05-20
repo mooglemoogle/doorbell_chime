@@ -11,24 +11,20 @@ LED light strip controller with a web UI. Runs animated patterns ("algorithms") 
 └─────────────┘           │  - Generates & broadcasts frames     │
                           └──────────────────────────────────────┘
                                        │ WebSocket (port 3002)
-                          ┌────────────┼────────────┐
-                          ▼            ▼            ▼
-                strip-client-ts strip-client- strip-client-
-                (TypeScript)      python         rust
-                (Pi hardware)  (Pi hardware) (Pi hardware)
+                                       ▼
+                               strip-client-rust
+                               (Pi hardware/Rust)
 ```
 
 ## Components
 
 | Directory | Language | Purpose |
 |---|---|---|
-| `lights-control-server/` | TypeScript/Node | Central controller — algorithms, HTTP API, WebSocket frame broadcast |
+| `lights-control-server/` | TypeScript/Bun | Central controller — algorithms, HTTP API, WebSocket frame broadcast |
 | `web-client/` | TypeScript/React | Web UI |
 | `data/` | JSON | Cycle definitions and strip configs |
 | `lights-cli/` | Go | CLI for sending commands |
-| `strip-client-ts/` | TypeScript/Node | WebSocket strip client (TypeScript) |
-| `strip-client-python/` | Python | WebSocket strip client (Python/neopixel) |
-| `strip-client-rust/` | Rust | WebSocket strip client (Rust/rpi_ws281x) |
+| `strip-client-rust/` | Rust | WebSocket strip client (rpi_ws281x) |
 
 ---
 
@@ -37,14 +33,15 @@ LED light strip controller with a web UI. Runs animated patterns ("algorithms") 
 ### Web Server + Client
 
 ```sh
-# Server (TypeScript, watch mode)
-cd lights-control-server && yarn && yarn start
+# Server (watch mode)
+cd lights-control-server && bun install && bun start
 
 # Client (React, watch mode)
-cd web-client && yarn && yarn dev
-```
+cd web-client && bun install && bun dev
 
-The client is served statically by the Express server after `yarn build`.
+# Client (production build → web-client/dist/, served by server)
+cd web-client && bun run build
+```
 
 ### CLI (`lights-cli`)
 
@@ -59,11 +56,11 @@ scp lights pi@raspberrypi.local:~/bin/
 
 ---
 
-## Strip Clients
+## Strip Client (`strip-client-rust/`)
 
-Each strip client reads `~/.local/lights-control/strip_config.json` (override with `STRIP_CONFIG` env var), connects to the light controller's WebSocket server, and drives a physical LED strip. Run one client per strip.
+Reads `~/.local/lights-control/strip_config.json` (override with `STRIP_CONFIG` env var), connects to the server's WebSocket, and drives a physical LED strip via GPIO/PWM (default GPIO 18).
 
-### `~/.local/lights-control/strip_config.json` format
+### `~/.local/lights-control/strip_config.json`
 
 ```json
 {
@@ -87,38 +84,16 @@ Each strip client reads `~/.local/lights-control/strip_config.json` (override wi
 }
 ```
 
-### TypeScript strip client (`strip-client-ts/`)
+On first run without a config file, an interactive setup wizard will prompt for these values.
 
-```sh
-cd strip-client-ts
-npm install
-npm start          # production
-MOCK_PIIXEL=1 npm start   # mock mode
-```
-
-### Python strip client (`strip-client-python/`)
-
-Requires Python 3.13 and `pipenv`. On hardware, also requires the neopixel libraries (pre-installed on Raspberry Pi OS).
-
-```sh
-cd strip-client-python
-pipenv install
-pipenv run python strip_client.py          # production
-MOCK_NEOPIXEL=1 pipenv run python strip_client.py   # mock mode
-```
-
-### Rust strip client (`strip-client-rust/`)
-
-Uses [rpi_ws281x](https://github.com/jgarff/rpi_ws281x) via GPIO/PWM (same pin as neopixel, default GPIO 18).
-
-#### Mock mode (macOS, no hardware)
+### Mock mode (no hardware)
 
 ```sh
 cd strip-client-rust
 MOCK_WS2818=1 cargo run
 ```
 
-#### Build for Raspberry Pi (aarch64)
+### Build for Raspberry Pi (aarch64)
 
 Requires [OrbStack](https://orbstack.dev) or Docker Desktop running on Apple Silicon.
 
@@ -135,7 +110,7 @@ scp strip-client-pi pi@raspberrypi.local:~/
 ssh pi@raspberrypi.local './strip-client-pi'
 ```
 
-#### Environment variables
+### Environment variables
 
 | Variable | Default | Description |
 |---|---|---|
