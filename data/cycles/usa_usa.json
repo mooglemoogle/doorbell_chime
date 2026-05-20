@@ -1,0 +1,125 @@
+{
+  "name": "USA USA",
+  "cycles": [
+    {
+      "algorithm": "flag_wave",
+      "seconds_in_cycle": 600,
+      "options": {
+        "flag_parts": [
+          {
+            "color": [
+              0,
+              1,
+              1
+            ],
+            "parts": 1
+          },
+          {
+            "color": [
+              0,
+              0,
+              1
+            ],
+            "parts": 1
+          },
+          {
+            "color": [
+              0.6666666666666666,
+              1,
+              1
+            ],
+            "parts": 1
+          }
+        ]
+      },
+      "display_name": "American Flag"
+    },
+    {
+      "algorithm": "color_flow",
+      "seconds_in_cycle": 600,
+      "options": {
+        "colors": [
+          [
+            0,
+            1,
+            1
+          ],
+          [
+            0,
+            0,
+            1
+          ],
+          [
+            0.667,
+            1,
+            1
+          ]
+        ],
+        "width": 30,
+        "blend_width": 10,
+        "speed": 20
+      },
+      "display_name": "Red White Blue Flow"
+    },
+    {
+      "algorithm": "twinkles",
+      "seconds_in_cycle": 600,
+      "options": {
+        "density": 0.01,
+        "freq": 0.25,
+        "fadeTime": 2
+      }
+    },
+    {
+      "algorithm": "pulse_switch",
+      "seconds_in_cycle": 600,
+      "options": {
+        "colors": [
+          [
+            0,
+            1,
+            1
+          ],
+          [
+            0.6666666666666666,
+            1,
+            1
+          ]
+        ],
+        "onTime": 5,
+        "pulseTime": 0.5,
+        "lightsPerColor": 10,
+        "spaceBetween": 1
+      }
+    },
+    {
+      "algorithm": "march",
+      "seconds_in_cycle": 600,
+      "options": {
+        "colors": [
+          [
+            0,
+            1,
+            1
+          ],
+          [
+            0,
+            0,
+            1
+          ],
+          [
+            0.6666666666666666,
+            1,
+            1
+          ],
+          [
+            0,
+            0,
+            1
+          ]
+        ],
+        "freq": 2
+      }
+    }
+  ]
+}
