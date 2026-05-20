@@ -25,7 +25,7 @@ export class AnimationRunner {
   private nextAlg: BaseAlgorithm
   private lastChangeTime = Date.now()
   private nextCycleLength = Infinity
-  private timer: Timer
+  timer: Timer
   private running = false
 
   /** Virtual pixel array spanning all strips combined */
@@ -177,7 +177,7 @@ export class AnimationRunner {
       const done = this.curAlg.runCycle(idealFrameMs, idealFrameMs / 1000)
       this.pixels = this.curAlg.pixels
 
-      await this.frameGenerator.sendFrame(this.pixels, this.status.getValue('brightness'), this.timer)
+      await this.frameGenerator.sendFrame(this.pixels, this.status.getValue('brightness'))
 
       if (done) {
         this.curAlg = this.nextAlg

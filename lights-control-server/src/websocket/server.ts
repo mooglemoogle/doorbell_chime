@@ -22,6 +22,7 @@ export function createStripWebSocketServer(
   registry: StripRegistry,
   manager: StripManager,
   onLayoutChange: () => void,
+  onStripConnected: (stripId: string) => void,
 ): WebSocketServer {
   const wss = new WebSocketServer({ port })
 
@@ -65,6 +66,7 @@ export function createStripWebSocketServer(
           })
 
           if (layoutChanged) onLayoutChange()
+          else onStripConnected(stripId)
         } else if (msg.type === 'status' && registeredId) {
           manager.updateStatus(registeredId, msg.bufferedFrames)
         }

@@ -1,0 +1,16 @@
+[Unit]
+Description=LED Strip Client
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/home/chris/bin/strip-client-pi
+Restart=on-failure
+RestartSec=5
+Environment=HOME=/root
+Environment=STRIP_CONFIG=/home/chris/.local/lights-control/strip_config.json
+
+[Install]
+WantedBy=multi-user.target

@@ -12,6 +12,200 @@ export interface SettingsEditorProps {
 
 const NUMERIC_TYPES = new Set(['number', 'float', 'integer'])
 
+// HSV (0–1 each) ↔ hex RGB helpers for the color picker
+function hsvToHex(h: number, s: number, v: number): string {
+    const i = Math.floor(h * 6)
+    const f = h * 6 - i
+    const p = v * (1 - s)
+    const q = v * (1 - f * s)
+    const t = v * (1 - (1 - f) * s)
+    const [r, g, b] = ((): [number, number, number] => {
+        switch (i % 6) {
+            case 0: return [v, t, p]
+            case 1: return [q, v, p]
+            case 2: return [p, v, t]
+            case 3: return [p, q, v]
+            case 4: return [t, p, v]
+            default: return [v, p, q]
+        }
+    })()
+    const hex = (c: number) => Math.round(c * 255).toString(16).padStart(2, '0')
+    return `#${hex(r)}${hex(g)}${hex(b)}`
+}
+
+function hexToHsv(hex: string): [number, number, number] {
+    const r = parseInt(hex.slice(1, 3), 16) / 255
+    const g = parseInt(hex.slice(3, 5), 16) / 255
+    const b = parseInt(hex.slice(5, 7), 16) / 255
+    const max = Math.max(r, g, b)
+    const min = Math.min(r, g, b)
+    const d = max - min
+    const s = max === 0 ? 0 : d / max
+    const v = max
+    let h = 0
+    if (d !== 0) {
+        switch (max) {
+            case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break
+            case g: h = ((b - r) / d + 2) / 6; break
+            case b: h = ((r - g) / d + 4) / 6; break
+        }
+    }
+    return [h, s, v]
+}
+
+const ColorControl: FC<{
+    value: unknown
+    onChange: (v: number[]) => void
+}> = ({ value, onChange }) => {
+    const arr = Array.isArray(value) ? value as number[] : [0, 0, 1]
+    const [h, s, v] = arr
+    const hex = hsvToHex(h ?? 0, s ?? 0, v ?? 1)
+    return (
+        <input
+            type="color"
+            value={hex}
+            onChange={e => {
+                const [nh, ns, nv] = hexToHsv(e.target.value)
+                // Preserve white channel if present
+                onChange(arr.length === 4 ? [nh, ns, nv, arr[3]] : [nh, ns, nv])
+            }}
+            css={{ width: '48px', height: '28px', padding: '2px', cursor: 'pointer', border: 'none', background: 'none' }}
+        />
+    )
+}
+
+const ColorArrayControl: FC<{
+    schema: PropertySchema
+    value: unknown
+    onChange: (v: unknown) => void
+}> = ({ schema, value, onChange }) => {
+    const arr = Array.isArray(value) ? value as number[][] : []
+    const count = arr.length || schema.minItems || 2
+    const canAdd = schema.maxItems == null || count < schema.maxItems
+    const canRemove = count > (schema.minItems ?? 1)
+    return (
+        <div css={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px' }}>
+            {Array.from({ length: count }, (_, i) => (
+                <div key={i} css={{ position: 'relative', display: 'inline-flex' }}>
+                    <ColorControl
+                        value={arr[i] ?? [0, 0, 1]}
+                        onChange={v => {
+                            const next = [...arr]
+                            next[i] = v
+                            onChange(next)
+                        }}
+                    />
+                    {canRemove && (
+                        <button
+                            onClick={() => onChange(arr.filter((_, j) => j !== i))}
+                            css={{
+                                position: 'absolute', top: '-5px', right: '-5px',
+                                width: '14px', height: '14px', padding: 0,
+                                background: '#555', border: 'none', borderRadius: '50%',
+                                cursor: 'pointer', color: '#ccc', fontSize: '10px',
+                                lineHeight: '14px', textAlign: 'center',
+                                ':hover': { background: '#e06c75', color: '#fff' },
+                            }}
+                        >×</button>
+                    )}
+                </div>
+            ))}
+            {canAdd && (
+                <button
+                    onClick={() => onChange([...arr, arr[arr.length - 1] ?? [0, 0, 1]])}
+                    css={{
+                        width: '28px', height: '28px', padding: 0,
+                        background: 'none', border: '1px solid #555',
+                        borderRadius: '3px', cursor: 'pointer', color: '#aaa',
+                        fontSize: '16px', lineHeight: 1,
+                        ':hover': { borderColor: '#aaa', color: '#fff' },
+                    }}
+                >+</button>
+            )}
+        </div>
+    )
+}
+
+const ObjectArrayControl: FC<{
+    schema: PropertySchema
+    value: unknown
+    onChange: (v: unknown) => void
+}> = ({ schema, value, onChange }) => {
+    const itemSchema = schema.items!
+    const properties = itemSchema.properties!
+    const arr = Array.isArray(value) ? value as Record<string, unknown>[] : []
+    const count = arr.length || schema.minItems || 1
+    const canRemove = count > (schema.minItems ?? 1)
+    const canAdd = schema.maxItems == null || count < schema.maxItems
+
+    const defaults = Object.fromEntries(Object.entries(properties).map(([k, s]) => [k, s.default]))
+
+    const updateItem = (i: number, key: string, v: unknown) => {
+        // Materialise the full array so sparse items and items with missing fields
+        // are written out with schema defaults — prevents fields that were never
+        // touched from being omitted on save.
+        const full = Array.from({ length: count }, (_, j) => ({ ...defaults, ...(arr[j] ?? {}) }))
+        full[i] = { ...full[i], [key]: v }
+        onChange(full)
+    }
+
+    const addItem = () => {
+        const template = arr[arr.length - 1]
+            ?? Object.fromEntries(Object.entries(properties).map(([k, s]) => [k, s.default]))
+        onChange([...arr, { ...template }])
+    }
+
+    return (
+        <div css={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {Array.from({ length: count }, (_, i) => {
+                const item = arr[i] ?? {}
+                return (
+                    <div key={i} css={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                        {Object.entries(properties).map(([key, propSchema]) => (
+                            <div key={key} css={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span css={{ fontSize: '11px', color: '#888', whiteSpace: 'nowrap' }}>
+                                    {propSchema.title ?? key}
+                                </span>
+                                <PropertyControl
+                                    propKey={key}
+                                    schema={propSchema}
+                                    value={item[key]}
+                                    onChange={v => updateItem(i, key, v)}
+                                />
+                            </div>
+                        ))}
+                        {canRemove && (
+                            <button
+                                onClick={() => onChange(arr.filter((_, j) => j !== i))}
+                                css={{
+                                    marginLeft: 'auto', flexShrink: 0,
+                                    width: '20px', height: '20px', padding: 0,
+                                    background: 'none', border: '1px solid #555',
+                                    borderRadius: '50%', cursor: 'pointer', color: '#aaa',
+                                    fontSize: '12px', lineHeight: '18px', textAlign: 'center',
+                                    ':hover': { background: '#e06c75', borderColor: '#e06c75', color: '#fff' },
+                                }}
+                            >×</button>
+                        )}
+                    </div>
+                )
+            })}
+            {canAdd && (
+                <button
+                    onClick={addItem}
+                    css={{
+                        alignSelf: 'flex-start',
+                        padding: '2px 10px', background: 'none',
+                        border: '1px solid #555', borderRadius: '3px',
+                        cursor: 'pointer', color: '#aaa', fontSize: '13px',
+                        ':hover': { borderColor: '#aaa', color: '#fff' },
+                    }}
+                >+ Add</button>
+            )}
+        </div>
+    )
+}
+
 function getMin(s: PropertySchema): number | undefined {
     return s.minimum ?? s.inclusiveMinimum
 }
@@ -62,6 +256,18 @@ const PropertyControl: FC<{
     onChange: (v: unknown) => void
 }> = ({ propKey, schema, value, onChange }) => {
     const current = value ?? schema.default
+
+    if (schema.type === 'color') {
+        return <ColorControl value={current} onChange={v => onChange(v)} />
+    }
+
+    if (schema.type === 'array' && schema.items?.type === 'color') {
+        return <ColorArrayControl schema={schema} value={current} onChange={onChange} />
+    }
+
+    if (schema.type === 'array' && schema.items?.type === 'object' && schema.items.properties) {
+        return <ObjectArrayControl schema={schema} value={current} onChange={onChange} />
+    }
 
     if (schema.type === 'array' && schema.items && NUMERIC_TYPES.has(schema.items.type)) {
         return <ArrayControl schema={schema} value={current} onChange={onChange} />

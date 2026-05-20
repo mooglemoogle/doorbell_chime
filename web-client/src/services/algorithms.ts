@@ -19,6 +19,7 @@ export interface PropertySchema {
     minItems?: number;
     maxItems?: number;
     items?: PropertySchema;
+    properties?: Record<string, PropertySchema>;
     enum?: unknown[];
 }
 

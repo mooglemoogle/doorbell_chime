@@ -3,6 +3,7 @@ import { readFileSync } from 'fs'
 export interface CycleEntry {
   algorithm: string
   seconds_in_cycle: number
+  display_name?: string
   options: Record<string, unknown>
 }
 

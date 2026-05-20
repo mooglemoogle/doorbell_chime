@@ -17,4 +17,5 @@ tungstenite = "0.21"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing-appender = "0.2"
+signal-hook = "0.3"
 rs_ws281x = { version = "0.5", optional = true }

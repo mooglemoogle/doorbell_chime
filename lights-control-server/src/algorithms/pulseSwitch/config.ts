@@ -7,19 +7,11 @@ export const config: AlgorithmConfig = {
     type: 'object',
     properties: {
       colors: {
+        title: 'Colors',
         type: 'array',
-        items: { $ref: '#/$defs/color' },
+        items: { type: 'color' },
         minItems: 2,
         maxItems: 2,
-        $defs: {
-          color: {
-            title: 'Color (HSV)',
-            type: 'array',
-            minItems: 3,
-            maxItems: 4,
-            items: { type: 'number', inclusiveMinimum: 0.0, inclusiveMaximum: 1.0 },
-          },
-        },
       },
       onTime: { title: 'On Time (seconds)', type: 'number', default: 5, minimum: 0 },
       pulseTime: { title: 'Pulse Time (seconds)', type: 'number', default: 0.5, minimum: 0 },

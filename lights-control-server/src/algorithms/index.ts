@@ -27,6 +27,8 @@ import { Algorithm as TwoColorWaveAlgorithm } from "./twoColorWave/wave";
 import { config as twoColorWaveConfig } from "./twoColorWave/config";
 import { Algorithm as FlagWaveAlgorithm } from "./flagWave/flagWave";
 import { config as flagWaveConfig } from "./flagWave/config";
+import { Algorithm as ColorFlowAlgorithm } from "./colorFlow/colorFlow";
+import { config as colorFlowConfig } from "./colorFlow/config";
 
 export const algorithms: Record<string, AlgorithmModule> = {
     off: { Algorithm: OffAlgorithm, config: offConfig },
@@ -43,4 +45,5 @@ export const algorithms: Record<string, AlgorithmModule> = {
     split_rainbow: { Algorithm: SplitRainbowAlgorithm, config: splitRainbowConfig },
     two_color_wave: { Algorithm: TwoColorWaveAlgorithm, config: twoColorWaveConfig },
     flag_wave: { Algorithm: FlagWaveAlgorithm, config: flagWaveConfig },
+    color_flow: { Algorithm: ColorFlowAlgorithm, config: colorFlowConfig },
 };
