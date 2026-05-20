@@ -6,6 +6,7 @@ import { Brightness } from './subcomponents/Brightness';
 import { Command } from './subcomponents/Command';
 import { CycleSelection } from './subcomponents/CycleSelection';
 import { StripList } from './subcomponents/StripList';
+import { AnimationStatus } from './subcomponents/AnimationStatus';
 import { useInterval } from '@utils/useInterval';
 import { FetchStatusAtom } from '@atoms/status';
 import { FetchCycleNamesAtom } from '@atoms/cycles';
@@ -51,6 +52,9 @@ export const StatusPage: FC<StatusPageProps> = ({ className }) => {
             </div>
             <div>
                 <Command commandName="next" label="Next Pattern" />
+            </div>
+            <div>
+                <AnimationStatus />
             </div>
             <div>
                 <StripList />

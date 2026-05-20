@@ -1,7 +1,7 @@
 import { Status } from '../status'
 import { Cycles } from '../cycles'
 import logger from '../logger'
-import { Cycle } from '../cycle'
+import { Cycle, CycleEntry } from '../cycle'
 import { Timer } from '../timer'
 import { algorithms } from '../algorithms/index'
 import { BaseAlgorithm } from '../algorithms/_meta/index'
@@ -25,6 +25,7 @@ export class AnimationRunner {
   private nextAlg: BaseAlgorithm
   private lastChangeTime = Date.now()
   private nextCycleLength = Infinity
+  private currentEntry: CycleEntry | null = null
   timer: Timer
   private running = false
 
@@ -78,6 +79,7 @@ export class AnimationRunner {
     if (this.cycleIndex >= cycle.length) this.cycleIndex = 0
 
     const entry = cycle[this.cycleIndex]
+    this.currentEntry = entry
     this.nextCycleLength = entry.seconds_in_cycle
     const mod = algorithms[entry.algorithm]
     if (!mod) throw new Error(`Unknown algorithm: ${entry.algorithm}`)
@@ -98,6 +100,7 @@ export class AnimationRunner {
 
   turnOff(): void {
     logger.info('Lights off')
+    this.currentEntry = null
     this.cycleIndex = -1
     this.nextAlg = this.offAlg
     this.offAlg.setHueSat(this.curAlg.pixels)
@@ -149,7 +152,17 @@ export class AnimationRunner {
   }
 
   getStatus() {
-    return this.status.properties
+    return {
+      ...this.status.properties,
+      current_algorithm: this.currentEntry?.algorithm ?? null,
+      current_algorithm_display_name: this.currentEntry?.display_name ?? null,
+      current_algorithm_options: this.currentEntry?.options ?? null,
+      last_change_time: this.lastChangeTime,
+      next_change_time: this.nextCycleLength === Infinity
+        ? null
+        : this.lastChangeTime + this.nextCycleLength * 1000,
+      is_in_transition: this.isInTransition(),
+    }
   }
 
   getCycleNames(): string[] {

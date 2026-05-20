@@ -7,6 +7,7 @@ export default (router: Router, manager: StripManager, registry: StripRegistry, 
         const connected = manager.getConnected();
         const strips = registry.strips.map(strip => {
             const conn = connected.find(c => c.stripId === strip.stripId);
+            const metrics = manager.snapshotMetrics(strip.stripId);
             return {
                 stripId: strip.stripId,
                 numPixels: strip.numPixels,
@@ -17,6 +18,7 @@ export default (router: Router, manager: StripManager, registry: StripRegistry, 
                 disabled: manager.isDisabled(strip.stripId),
                 bufferedFrames: conn?.bufferedFrames ?? 0,
                 lastSeen: conn?.lastSeen ?? null,
+                metrics: metrics ?? null,
             };
         });
         res.status(200).json(strips);

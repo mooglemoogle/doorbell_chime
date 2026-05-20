@@ -13,6 +13,14 @@ interface StatusMessage {
   type: 'status'
   bufferedFrames: number
   lastApplied?: string
+  framesApplied?: number
+  underruns?: number
+  drops?: number
+  processUptimeSecs?: number
+  targetFps?: number
+  measuredFps?: number
+  avgLatencyMs?: number
+  avgFrameIntervalMs?: number
 }
 
 type StripMessage = RegisterMessage | StatusMessage
@@ -68,7 +76,16 @@ export function createStripWebSocketServer(
           if (layoutChanged) onLayoutChange()
           else onStripConnected(stripId)
         } else if (msg.type === 'status' && registeredId) {
-          manager.updateStatus(registeredId, msg.bufferedFrames)
+          manager.updateStatus(registeredId, msg.bufferedFrames, {
+            framesApplied: msg.framesApplied,
+            underruns: msg.underruns,
+            drops: msg.drops,
+            processUptimeSecs: msg.processUptimeSecs,
+            targetFps: msg.targetFps,
+            measuredFps: msg.measuredFps,
+            avgLatencyMs: msg.avgLatencyMs,
+            avgFrameIntervalMs: msg.avgFrameIntervalMs,
+          })
         }
       }
     })

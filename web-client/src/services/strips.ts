@@ -1,3 +1,23 @@
+export interface StripReportedStats {
+    framesApplied: number;
+    underruns: number;
+    drops: number;
+    processUptimeSecs: number;
+    targetFps: number;
+    measuredFps?: number;
+    avgLatencyMs?: number;
+    avgFrameIntervalMs?: number;
+}
+
+export interface StripMetrics {
+    connectedAt: number;
+    uptimeMs: number;
+    avgFpsSent: number;
+    minBuffer: number;
+    maxBuffer: number;
+    reported: StripReportedStats | null;
+}
+
 export interface Strip {
     stripId: string;
     numPixels: number;
@@ -7,6 +27,7 @@ export interface Strip {
     disabled: boolean;
     bufferedFrames: number;
     lastSeen: number | null;
+    metrics: StripMetrics | null;
     physical: {
         length_meters: number;
         location: {

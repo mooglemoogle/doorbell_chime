@@ -71,6 +71,17 @@ struct StripConfig {
 const MSG_FRAME: u8 = 0x01;
 const MSG_SYNC: u8 = 0x02;
 
+struct BufferStats {
+    buffered_frames: usize,
+    frames_applied: u64,
+    underruns: u64,
+    drops: u64,
+    measured_fps: f32,
+    target_fps: u32,
+    avg_latency_ms: f64,
+    avg_frame_interval_ms: f64,
+}
+
 struct FrameBuffer {
     frames: BTreeMap<u64, Vec<u8>>,
     last_frame: Option<Vec<u8>>,
@@ -80,10 +91,16 @@ struct FrameBuffer {
     avg_frame_interval_ms: f64,
     last_consumed_ts: Option<u64>,
     last_frame_added: Instant,
+    frames_applied: u64,
+    underruns: u64,
+    render_count: u32,
+    fps_window_start: Instant,
+    measured_fps: f32,
 }
 
 impl FrameBuffer {
     fn new() -> Self {
+        let now = Instant::now();
         FrameBuffer {
             frames: BTreeMap::new(),
             last_frame: None,
@@ -92,7 +109,12 @@ impl FrameBuffer {
             avg_latency_ms: 0.0,
             avg_frame_interval_ms: 0.0,
             last_consumed_ts: None,
-            last_frame_added: Instant::now(),
+            last_frame_added: now,
+            frames_applied: 0,
+            underruns: 0,
+            render_count: 0,
+            fps_window_start: now,
+            measured_fps: 0.0,
         }
     }
 
@@ -104,7 +126,11 @@ impl FrameBuffer {
 
     fn get_frame(&mut self, now_ms: u64) -> Option<Vec<u8>> {
         // Find the latest frame at or before now_ms
-        let best_ts = self.frames.range(..=now_ms).next_back().map(|(&ts, _)| ts)?;
+        let Some(best_ts) = self.frames.range(..=now_ms).next_back().map(|(&ts, _)| ts) else {
+            if self.last_frame.is_some() { self.underruns += 1; }
+            return None;
+        };
+        self.frames_applied += 1;
         let frame = self.frames.remove(&best_ts).unwrap();
         // Drop older frames — they were never displayed
         let stale: Vec<u64> = self.frames.range(..best_ts).map(|(&k, _)| k).collect();
@@ -148,6 +174,33 @@ impl FrameBuffer {
             self.frames.remove(&oldest);
             self.dropped += 1;
         }
+    }
+
+    fn record_render(&mut self) {
+        self.render_count += 1;
+        let elapsed = self.fps_window_start.elapsed();
+        if elapsed >= Duration::from_secs(1) {
+            self.measured_fps = self.render_count as f32 / elapsed.as_secs_f32();
+            self.render_count = 0;
+            self.fps_window_start = Instant::now();
+        }
+    }
+
+    fn snapshot_stats(&mut self) -> BufferStats {
+        let stats = BufferStats {
+            buffered_frames: self.frames.len(),
+            frames_applied: self.frames_applied,
+            underruns: self.underruns,
+            drops: self.dropped,
+            measured_fps: self.measured_fps,
+            target_fps: self.fps,
+            avg_latency_ms: self.avg_latency_ms,
+            avg_frame_interval_ms: self.avg_frame_interval_ms,
+        };
+        self.frames_applied = 0;
+        self.underruns = 0;
+        self.dropped = 0;
+        stats
     }
 }
 
@@ -241,9 +294,6 @@ fn run_apply_loop(
         }
     };
 
-    let mut render_count: u32 = 0;
-    let mut fps_window = Instant::now();
-    let mut measured_fps: f32 = 0.0;
     let mut last_status = Instant::now() - Duration::from_millis(500);
 
     let mut fading = false;
@@ -252,7 +302,7 @@ fn run_apply_loop(
     let mut last_rendered: Vec<u8> = vec![0u8; num_pixels * bpp];
 
     loop {
-        let (frame, has_fresh, fps, buffered, max_frames, dropped, avg_lat, avg_interval, next_ts, stale_secs) = {
+        let (frame, has_fresh, fps, buffered, max_frames, dropped, avg_lat, avg_interval, next_ts, stale_secs, measured_fps) = {
             let mut buf = buffer.lock().unwrap();
             let now_ms = now_ms();
             let fresh = buf.get_frame(now_ms);
@@ -262,7 +312,7 @@ fn run_apply_loop(
             let max = buf.fps as usize;
             let next = buf.next_frame_ts();
             let stale = buf.last_frame_added.elapsed().as_secs();
-            (f, has_fresh, buf.fps, buffered, max, buf.dropped, buf.avg_latency_ms, buf.avg_frame_interval_ms, next, stale)
+            (f, has_fresh, buf.fps, buffered, max, buf.dropped, buf.avg_latency_ms, buf.avg_frame_interval_ms, next, stale, buf.measured_fps)
         };
 
         // --- Fade state machine ---
@@ -292,14 +342,7 @@ fn run_apply_loop(
 
         if let Some(ref pixels) = pixels_opt {
             last_rendered = pixels.clone();
-
-            render_count += 1;
-            let elapsed = fps_window.elapsed();
-            if elapsed >= Duration::from_secs(1) {
-                measured_fps = render_count as f32 / elapsed.as_secs_f32();
-                render_count = 0;
-                fps_window = Instant::now();
-            }
+            buffer.lock().unwrap().record_render();
 
             if mock {
                 let status = format!(
@@ -509,6 +552,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let bpp = config.hardware.bpp;
     let physical = config.physical.clone();
 
+    let process_start = Instant::now();
     let mut reconnect_delay = Duration::from_secs(1);
     const RECONNECT_MAX: Duration = Duration::from_secs(30);
     const STATUS_INTERVAL: Duration = Duration::from_secs(5);
@@ -550,11 +594,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     'recv: loop {
                         // Send status heartbeat if due
                         if last_status.elapsed() >= STATUS_INTERVAL {
-                            let count = buffer.lock().unwrap().buffered_count();
+                            let stats = buffer.lock().unwrap().snapshot_stats();
+                            let uptime_secs = process_start.elapsed().as_secs();
+                            info!(
+                                buffered = stats.buffered_frames,
+                                applied = stats.frames_applied,
+                                underruns = stats.underruns,
+                                drops = stats.drops,
+                                fps = format!("{:.1}/{}", stats.measured_fps, stats.target_fps),
+                                lat_ms = format!("{:.1}", stats.avg_latency_ms),
+                                uptime_s = uptime_secs,
+                                "Status"
+                            );
                             let status = json!({
                                 "type": "status",
-                                "bufferedFrames": count,
-                                "lastApplied": now_ms(),
+                                "bufferedFrames": stats.buffered_frames,
+                                "framesApplied": stats.frames_applied,
+                                "underruns": stats.underruns,
+                                "drops": stats.drops,
+                                "processUptimeSecs": uptime_secs,
+                                "targetFps": stats.target_fps,
+                                "measuredFps": stats.measured_fps,
+                                "avgLatencyMs": stats.avg_latency_ms,
+                                "avgFrameIntervalMs": stats.avg_frame_interval_ms,
                             })
                             .to_string();
                             if socket.send(Message::Text(status.into())).is_err() {
