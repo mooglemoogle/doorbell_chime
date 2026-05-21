@@ -93,16 +93,20 @@ cd strip-client-rust
 MOCK_WS2818=1 cargo run
 ```
 
-### Build for Raspberry Pi (aarch64)
+### Build for Raspberry Pi
 
-Requires [OrbStack](https://orbstack.dev) or Docker Desktop running on Apple Silicon.
+Requires [OrbStack](https://orbstack.dev) or Docker Desktop. The first run compiles `rpi_ws281x` from source (~5 min); subsequent builds are fast.
+
+| Board | Architecture | Script | Output |
+|---|---|---|---|
+| Pi Zero 2 W, Pi 3/4/5 | aarch64 | `./build-pi.sh` | `strip-client-pi` |
+| Pi Zero W (original) | ARMv6 | `./build-pi-zero.sh` | `strip-client-pi-zero` |
 
 ```sh
 cd strip-client-rust
-./build-pi.sh
+./build-pi.sh          # aarch64
+./build-pi-zero.sh     # ARMv6
 ```
-
-The first run downloads the base image and compiles `rpi_ws281x` from source (~5 min). Subsequent builds are fast. Output: `strip-client-rust/strip-client-pi`.
 
 ```sh
 # Deploy to Pi

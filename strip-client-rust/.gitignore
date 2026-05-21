@@ -1,3 +1,5 @@
 /target/
 /.build-cache/
+/.build-cache-armv6/
 /strip-client-pi
+/strip-client-pi-zero

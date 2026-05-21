@@ -1,0 +1,33 @@
+# Bullseye = glibc 2.31, matching Raspberry Pi OS Bullseye.
+# Change to rust:1-buster (glibc 2.28) if your Pi runs Buster.
+FROM rust:1-bullseye
+
+# Cross-compilation toolchain for ARMv6 (Pi Zero W)
+RUN apt-get update && \
+    apt-get install -y cmake git clang libclang-dev pkg-config \
+        gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN rustup target add arm-unknown-linux-gnueabihf
+
+# Cross-compile rpi_ws281x C library for ARMv6 and install into a sysroot
+ENV SYSROOT=/sysroot/arm-linux-gnueabihf
+RUN git clone --depth 1 https://github.com/jgarff/rpi_ws281x.git /tmp/rpi_ws281x && \
+    cmake -S /tmp/rpi_ws281x -B /tmp/rpi_ws281x/build \
+        -DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc \
+        -DCMAKE_SYSTEM_NAME=Linux \
+        -DCMAKE_SYSTEM_PROCESSOR=arm \
+        -DCMAKE_INSTALL_PREFIX=${SYSROOT} \
+        -DBUILD_SHARED=OFF \
+        -DBUILD_SHARED_LIBS=OFF && \
+    cmake --build /tmp/rpi_ws281x/build && \
+    cmake --install /tmp/rpi_ws281x/build && \
+    rm -rf /tmp/rpi_ws281x
+
+ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc
+ENV CC_arm_unknown_linux_gnueabihf=arm-linux-gnueabihf-gcc
+ENV RUSTFLAGS="-C target-cpu=arm1176jzf-s -L ${SYSROOT}/lib"
+ENV BINDGEN_EXTRA_CLANG_ARGS="--target=arm-linux-gnueabihf -I${SYSROOT}/include"
+ENV PKG_CONFIG_ALLOW_CROSS=1
+ENV PKG_CONFIG_PATH=${SYSROOT}/lib/pkgconfig
+ENV PKG_CONFIG_SYSROOT_DIR=${SYSROOT}
