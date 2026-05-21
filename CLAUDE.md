@@ -28,7 +28,6 @@ Strip clients connect to the server, register themselves, and receive binary fra
 | `lights-control-server/` | TypeScript/Bun | Central controller — runs algorithms, serves HTTP API, broadcasts frames |
 | `web-client/` | TypeScript/React | Web UI (Blueprint.js, Emotion CSS, Jotai state) |
 | `data/` | JSON | Shared data — cycle definitions, strip configs |
-| `lights-cli/` | Go | CLI for sending commands (needs update: still uses ZMQ, see below) |
 | `strip-client-rust/` | Rust | WebSocket strip client — drives hardware via rpi_ws281x |
 
 ## Running Things
@@ -76,8 +75,6 @@ scp strip-client-pi pi@raspberrypi.local:~/
 | `POST` | `/api/actions/next` | Skip to next algorithm |
 | `POST` | `/api/actions/set_brightness/:value` | 0.0–1.0 |
 | `POST` | `/api/actions/set_cycle/:name` | Must match a filename in `data/cycles/` |
-
-> **Note:** `lights-cli` currently uses ZMQ and is broken — it needs to be updated to use these HTTP endpoints instead.
 
 ## Configuration Files
 

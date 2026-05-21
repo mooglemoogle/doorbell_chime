@@ -23,7 +23,6 @@ LED light strip controller with a web UI. Runs animated patterns ("algorithms") 
 | `lights-control-server/` | TypeScript/Bun | Central controller — algorithms, HTTP API, WebSocket frame broadcast |
 | `web-client/` | TypeScript/React | Web UI |
 | `data/` | JSON | Cycle definitions and strip configs |
-| `lights-cli/` | Go | CLI for sending commands |
 | `strip-client-rust/` | Rust | WebSocket strip client (rpi_ws281x) |
 
 ---
@@ -42,19 +41,6 @@ cd web-client && bun install && bun dev
 # Client (production build → web-client/dist/, served by server)
 cd web-client && bun run build
 ```
-
-### CLI (`lights-cli`)
-
-```sh
-cd lights-cli
-go build -o lights
-./lights --help
-
-# Copy binary to Pi
-scp lights pi@raspberrypi.local:~/bin/
-```
-
----
 
 ## Strip Client (`strip-client-rust/`)
 
