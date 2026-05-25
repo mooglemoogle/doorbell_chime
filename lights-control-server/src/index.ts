@@ -17,6 +17,7 @@ import { Cycles } from './cycles';
 import { createStripWebSocketServer } from './websocket/server';
 import { SchedulerConfig } from './scheduler/config';
 import { Scheduler } from './scheduler/scheduler';
+import { MqttBridge } from './homeAssistant/mqttBridge';
 
 // Build the dependency graph
 const status = new Status();
@@ -58,6 +59,9 @@ createStripWebSocketServer(wsPort, registry, manager, restartRunner, (stripId) =
 
 startRunner();
 scheduler.start();
+
+const bridge = new MqttBridge(() => runner, manager, () => scheduler.notifyManualCommand());
+bridge.connect();
 
 const app = express();
 
